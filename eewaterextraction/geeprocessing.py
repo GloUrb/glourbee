@@ -1,5 +1,7 @@
 import ee
 
+from eewaterextraction.classification import calculateCloudScore
+
 
 def selectDGOs(dgo_shp, dgo_list):
     # Extraire l'entité des DGO dans la liste
@@ -26,13 +28,17 @@ def getLandsatCollection(start, end, cloud_filter):
     
     # Filtrage du cloud cover
     landsat_collection = landsat_collection.filter(ee.Filter.lte('CLOUD_COVER', cloud_filter))
-                #.map(maskL8sr)
     
     return landsat_collection
 
 
-def filterDGO(collection, unique_dgo):
+def filterDGO(collection, unique_dgo, landsat_scale, cloud_filter = None):
     # Filtrage de la collection sur l'étendue du DGO
     filtered_collection = collection.filterBounds(unique_dgo.geometry()) 
+    
+    # Filtrage du cloud cover
+    if cloud_filter:
+        filtered_collection = filtered_collection.map(calculateCloudScore(unique_dgo, landsat_scale))
+        filtered_collection = filtered_collection.filter(ee.Filter.lte('CLOUD_SCORE', cloud_filter))
     
     return filtered_collection

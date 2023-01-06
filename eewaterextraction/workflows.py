@@ -3,14 +3,15 @@ import geemap
 
 import pandas as pd
 
-from .geeprocessing import *
-from .classification import *
-from .vectorization import *
+from eewaterextraction.geeprocessing import *
+from eewaterextraction.classification import *
+from eewaterextraction.vectorization import *
 
 
 def dgos_properties_to_csv(dgo_shapefile_path, output_csv, dgo_list = None):
     # Paramètres fixes 
-    cloud_filter = 80
+    image_cloud_filter = 80
+    dgo_cloud_filter = 80
     landsat_scale = 30
     px_simplify_tolerance = 1.5
     start_date = ee.Date('1980-01-01')
@@ -25,26 +26,27 @@ def dgos_properties_to_csv(dgo_shapefile_path, output_csv, dgo_list = None):
         dgo_list = range(n_dgo)
     
     # Récupérer la collection d'images landsat
-    landsat_collection = getLandsatCollection(start_date, end_date, cloud_filter)
+    landsat_collection = getLandsatCollection(start_date, end_date, image_cloud_filter)
+
     output_collection = None
-
-    # Calculer les MNDWI
-    mndwi_collection = landsat_collection.map(calculateMNDWI)
-
     for dgo_fid in dgo_list:
         
         # Sélectionner le DGO
         selected_dgo = selectDGOs(dgo_shp, [dgo_fid]).first()
-        dgo_mndwi_coll = filterDGO(mndwi_collection, selected_dgo)
+        dgo_collection = filterDGO(landsat_collection, selected_dgo, landsat_scale, dgo_cloud_filter)
+
+        # Calculer les MNDWI
+        dgo_mndwi_coll = dgo_collection.map(calculateMNDWI)
         
-        # Vectoriser les surfaces en eau
-        raster_water = dgo_mndwi_coll.map(vectorizeWater(selected_dgo, landsat_scale, px_simplify_tolerance))
-        
-        # Ajouter les résultats à l'output général
-        if not output_collection:
-            output_collection = raster_water
-        else:
-            output_collection = output_collection.merge(raster_water)
+        if dgo_mndwi_coll:
+            # Vectoriser les surfaces en eau
+            raster_water = dgo_mndwi_coll.map(vectorizeWater(selected_dgo, landsat_scale, px_simplify_tolerance))
+            
+            # Ajouter les résultats à l'output général
+            if not output_collection:
+                output_collection = raster_water
+            else:
+                output_collection = output_collection.merge(raster_water)
 
     # Récupération des propriété des images en local
     collection_props = output_collection.getInfo()
@@ -60,3 +62,9 @@ def dgos_properties_to_csv(dgo_shapefile_path, output_csv, dgo_list = None):
 
     # Export csv
     props_df.to_csv(output_csv)
+    
+    
+if __name__ == "__main__":
+    dgo_shapefile_path = './example_data/Lhasa_RC_DGO2km_updated.shp' 
+    output_csv = './example_data/properties.csv'
+    dgo_list = [1,5,30]
