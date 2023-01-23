@@ -10,5 +10,6 @@ setup(
         'earthengine-api',
         'pandas',
         'geemap',
+        'ipython'
     ],
 )
