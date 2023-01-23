@@ -14,6 +14,19 @@ def calculateMNDWI(image):
     return output_img
 
 
+def calculateNDVI(image):
+    # Calculer l'image de MNDWI
+    output_img = image.normalizedDifference(['B4','B3']).rename('NDVI')
+    
+    # Copier la propriété DATE_ACQUIRED
+    output_img = output_img.copyProperties(
+        source = image,
+        properties = ['DATE_ACQUIRED']
+    )
+    
+    return output_img
+
+
 def extractWater(mndwi):
     # Seuillage du raster
     raster_water = mndwi.expression('MNDWI >  0.0', {'MNDWI': mndwi.select('MNDWI')}).rename('WATER')

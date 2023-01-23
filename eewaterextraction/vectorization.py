@@ -46,10 +46,18 @@ def vectorizeWater(selected_dgo, landsat_scale, px_simplify_tolerance):
             scale = landsat_scale
             )
         
+        # Calcul du mndwi moyen de tout le DGO
+        mean_mndwi = mndwi.reduceRegion(
+            reducer = ee.Reducer.mean(),
+            geometry = selected_dgo.geometry(),
+            scale = landsat_scale
+            )
+        
         raster_water = raster_water.set({'DGO_FID': selected_dgo.get('DGO_FID'),
                                         'DATE_ACQUIRED': mndwi.get('DATE_ACQUIRED'),
                                         'MEAN_WATER_MNDWI': mean_water_mndwi.get('MNDWI'),
                                         'MEAN_DRY_MNDWI': mean_dry_mndwi.get('MNDWI'),
+                                        'MEAN_MNDWI': mean_mndwi.get('MNDWI'),
                                         'WATER_AREA': water_area.get('WATER'),
                                         'WATER_PERIMETER': water_perimeter})
         

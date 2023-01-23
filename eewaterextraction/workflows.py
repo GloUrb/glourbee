@@ -38,6 +38,9 @@ def dgos_properties_to_csv(dgo_shapefile_path, output_csv, dgo_list = None):
         # Calculer les MNDWI
         dgo_mndwi_coll = dgo_collection.map(calculateMNDWI)
         
+        # Calculer le NDVI
+        dgo_ndvi_coll = dgo_collection.map(calculateNDVI)
+        
         if dgo_mndwi_coll:
             # Vectoriser les surfaces en eau
             raster_water = dgo_mndwi_coll.map(vectorizeWater(selected_dgo, landsat_scale, px_simplify_tolerance))
