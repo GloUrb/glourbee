@@ -10,6 +10,8 @@ setup(
         'earthengine-api',
         'pandas',
         'geemap',
-        'ipython'
+        'ipython',
+        'ipykernel',
+        'ipyleaflet==0.16'
     ],
 )

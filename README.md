@@ -20,24 +20,4 @@ python -m pip install -e .
 
 # Example usage
 
-```python
-# Import packages
-import ee
-from eewaterextraction.workflows import dgos_properties_to_csv
-
-# Authentificate using your preferred method
-credentials = ee.ServiceAccountCredentials('ee-water-extraction@earthengine-371715.iam.gserviceaccount.com', 
-                                           './earthengine-key.json')
-ee.Initialize(credentials)
-
-# Run the dgos_properties_to_csv workflow for some DGOs
-dgos_properties_to_csv(
-    dgo_shapefile_path = './example_data/Lhasa_RC_DGO2km_updated.shp', 
-    output_csv = './example_data/properties.csv',
-    dgo_list = [1,5,30])
-
-# Run the dgos_properties_to_csv workflow for all DGOs
-dgos_properties_to_csv(
-    dgo_shapefile_path = './example_data/Lhasa_RC_DGO2km_updated.shp', 
-    output_csv = './example_data/properties.csv')
-```
+The `notebook.ipynb` file contains example of how to use the ee-waterextraction tool.

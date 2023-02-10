@@ -1,63 +1,89 @@
 import ee
 
+######
+## Indicators
 
 def calculateMNDWI(image):
     # Calculer l'image de MNDWI
-    output_img = image.normalizedDifference(['B2','B5']).rename('MNDWI')
+    output_img = image.normalizedDifference(['green','swir1']).rename('MNDWI')
     
-    # Copier la propriété DATE_ACQUIRED
-    output_img = output_img.copyProperties(
-        source = image,
-        properties = ['DATE_ACQUIRED']
-    )
-    
-    return output_img
+    return image.addBands(output_img)
 
 
 def calculateNDVI(image):
     # Calculer l'image de MNDWI
-    output_img = image.normalizedDifference(['B4','B3']).rename('NDVI')
+    output_img = image.normalizedDifference(['nir','red']).rename('NDVI')
     
-    # Copier la propriété DATE_ACQUIRED
-    output_img = output_img.copyProperties(
-        source = image,
-        properties = ['DATE_ACQUIRED']
-    )
-    
-    return output_img
+    return image.addBands(output_img)
 
 
-def extractWater(mndwi):
+def calculateNDWI(image):
+    # Calculer l'image de MNDWI
+    output_img = image.normalizedDifference(['green','nir']).rename('NDWI')
+    
+    return image.addBands(output_img)
+
+
+def calculateIndicators(collection):
+    '''
+    Documentation
+    '''
+    
+    collection = collection.map(calculateMNDWI).map(calculateNDVI).map(calculateNDWI)
+    
+    return collection
+
+
+######
+## Thresholds to classify objects
+
+def extractWater(image):
     # Seuillage du raster
-    raster_water = mndwi.expression('MNDWI >  0.0', {'MNDWI': mndwi.select('MNDWI')}).rename('WATER')
+    output_img = image.expression('MNDWI >  0.0', {'MNDWI': image.select('MNDWI')}).rename('WATER')
     
     # Filtre modal pour retirer les pixels isolés
-    raster_water = raster_water.focalMode(3)
+    output_img = output_img.focalMode(3)
     
-    return raster_water
+    # Masquer ce qui n'est pas classé
+    mask = (output_img.eq(1))
+    output_img = output_img.updateMask(mask)
+    
+    return image.addBands(output_img)
 
 
-def calculateCloudScore(dgo_shape, landsat_scale):
-    def mapImage(image):
-        cloudShadowBitMask = (1 << 3)
-        cloudsBitMask = (1 << 5)
-        
-        qa = image.select('QA_PIXEL')
-        cloud_mask = (qa.bitwiseAnd(cloudShadowBitMask).eq(0).And(qa.bitwiseAnd(cloudsBitMask).eq(0)))
-        
-        cloudy_size = cloud_mask.reduceRegion(
-            reducer = ee.Reducer.sum(),
-            geometry = dgo_shape.geometry(),
-            scale = landsat_scale
-        )
-        
-        full_size = cloud_mask.reduceRegion(
-            reducer = ee.Reducer.count(),
-            geometry = dgo_shape.geometry(),
-            scale = landsat_scale
-        )
-        
-        cloud_score = cloudy_size.getNumber('QA_PIXEL').divide(full_size.getNumber('QA_PIXEL')).multiply(100)
+def extractVegetation(image):
+    # Seuillage du raster
+    output_img = image.expression('NDVI > 0.15', {'NDVI': image.select('NDVI')}).rename('VEGETATION')
+    
+    # Filtre modal pour retirer les pixels isolés
+    output_img = output_img.focalMode(3)
+    
+    # Masquer ce qui n'est pas classé
+    mask = (output_img.eq(1))
+    output_img = output_img.updateMask(mask)
+    
+    return image.addBands(output_img)
 
-        return image.set({'CLOUD_SCORE': cloud_score})
-    return mapImage
+
+def extractActiveChannel(image):
+    # Seuillage du raster
+    output_img = image.expression('MNDWI > -0.4 && NDVI < 0.2', 
+                                                         {'MNDWI': image.select('MNDWI'),
+                                                          'NDVI': image.select('NDVI')}
+                                                         ).rename('AC')
+    
+    # Filtre modal pour retirer les pixels isolés
+    output_img = output_img.focalMode(3)
+    
+    # Masquer ce qui n'est pas classé
+    mask = (output_img.eq(1))
+    output_img = output_img.updateMask(mask)
+    
+    return image.addBands(output_img)
+
+
+def classifyObjects(collection):
+    
+    collection = collection.map(extractWater).map(extractVegetation).map(extractActiveChannel)
+
+    return collection
