@@ -8,6 +8,15 @@ def imageVisualization(collection, landsat_id, dgo_shp):
     output_map.addLayer(dgo_shp, name='DGOs')
     output_map.center_object(dgo_shp)
 
+    output_map.add_labels(
+        dgo_shp,
+        "DGO_FID",
+        font_size="12pt",
+        font_color="black",
+        font_family="arial",
+        font_weight="bold",
+    )
+    
     image = collection.filter(ee.Filter.eq('LANDSAT_PRODUCT_ID', landsat_id)).first()
     
     #TODO add layers if band exists

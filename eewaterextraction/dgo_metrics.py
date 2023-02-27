@@ -5,7 +5,7 @@ def calculateCloudScore(image, dgo_shape, scale=30):
     cloudShadowBitMask = (1 << 3)
     cloudsBitMask = (1 << 5)
     
-    qa = image.select('qa_pixel')
+    qa = image.unmask().select('qa_pixel')
     cloud_mask = (qa.bitwiseAnd(cloudShadowBitMask).eq(0).And(qa.bitwiseAnd(cloudsBitMask).eq(0)))
     
     nocloud_size = cloud_mask.reduceRegion(
@@ -132,6 +132,45 @@ def calculateVegetationMetrics(image, dgo, scale=30, simplify_tolerance=1.5):
     return results
 
 
+def calculateACMetrics(image, dgo, scale=30, simplify_tolerance=1.5):
+    # Vectorisation des surfaces
+    vectors = image.select('AC').reduceToVectors(
+        geometry = dgo.geometry(),
+        scale = scale,
+        eightConnected = True,
+        maxPixels = 1e12,
+        geometryType = 'polygon')
+    
+    # Séparer les surfaces végétation du reste
+    vector_ac = vectors.filter("label == 1")
+    
+    # Initialisation du dictionnaire des résultats
+    results = dict()
+
+    # Calculer l'aire des surfaces végétation
+    results['AC_AREA'] = image.select('AC').reduceRegion(
+        reducer = ee.Reducer.sum(),
+        geometry = vector_ac,
+        scale = scale
+    ).getNumber('AC')
+    
+    # Calcul du ndvi moyen des surfaces végétation
+    results['MEAN_AC_NDVI'] = image.select('NDVI').reduceRegion(
+        reducer = ee.Reducer.mean(),
+        geometry = vector_ac,
+        scale = scale
+        ).getNumber('NDVI')
+    
+    # Calcul du mndwi moyen des surfaces végétation
+    results['MEAN_AC_MNDWI'] = image.select('MNDWI').reduceRegion(
+        reducer = ee.Reducer.mean(),
+        geometry = vector_ac,
+        scale = scale
+        ).getNumber('MNDWI')
+        
+    return results
+
+
 def dgoMetrics(image):
     def mapDGO(dgo_shape):
         
@@ -140,13 +179,13 @@ def dgoMetrics(image):
         cloud_score = calculateCloudScore(image, dgo_shape)
         water_metrics = calculateWaterMetrics(image, dgo_shape)
         vegetation_metrics = calculateVegetationMetrics(image, dgo_shape)
-        
-        #TODO: add AC metrics
+        ac_metrics = calculateACMetrics(image, dgo_shape)
         
         return dgo_shape.set({'LANDSAT_PRODUCT_ID': image.get('LANDSAT_PRODUCT_ID'), 
                               'CLOUD_SCORE': cloud_score, 
                               **water_metrics,
-                              **vegetation_metrics})
+                              **vegetation_metrics,
+                              **ac_metrics})
     return mapDGO
     
     

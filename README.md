@@ -21,3 +21,9 @@ python -m pip install -e .
 # Example usage
 
 The `notebook.ipynb` file contains example of how to use the ee-waterextraction tool.
+
+# TODO
+
+- [ ] Add AOI surface / Image coverage
+- [ ] Fix cloud score
+- [ ] Optimize DGO metrics mapping
