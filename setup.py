@@ -7,6 +7,7 @@ setup(
     install_requires=[
         'click',
         'numpy',
+        'geopandas',
         'earthengine-api',
         'pandas',
         'geemap',

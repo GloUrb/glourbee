@@ -9,9 +9,9 @@ def maskClouds(image):
     cloudsBitMask = (1 << 5)
     
     qa = image.select('qa_pixel')
-    mask = (qa.bitwiseAnd(cloudShadowBitMask).eq(0).And(qa.bitwiseAnd(cloudsBitMask).eq(0)))
+    clouds = (qa.bitwiseAnd(cloudShadowBitMask).eq(0).And(qa.bitwiseAnd(cloudsBitMask).eq(0))).rename('CLOUDS')
     
-    return image.updateMask(mask)
+    return image.updateMask(clouds).addBands(clouds)
 
 
 def getLandsatCollection(start=ee.Date('1980-01-01'), end=ee.Date('2100-01-01'), cloud_masking=True, cloud_filter=None, roi=None):  

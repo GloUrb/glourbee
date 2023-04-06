@@ -2,28 +2,48 @@ import ee
 
 
 def calculateCloudScore(image, dgo_shape, scale=30):
-    cloudShadowBitMask = (1 << 3)
-    cloudsBitMask = (1 << 5)
     
-    qa = image.unmask().select('qa_pixel')
-    cloud_mask = (qa.bitwiseAnd(cloudShadowBitMask).eq(0).And(qa.bitwiseAnd(cloudsBitMask).eq(0)))
+    cloud_mask = image.unmask().select('CLOUDS').eq(0)
     
-    nocloud_size = cloud_mask.reduceRegion(
+    cloudy_size = cloud_mask.reduceRegion(
         reducer = ee.Reducer.sum(),
         geometry = dgo_shape.geometry(),
         scale = scale
-    ).getNumber('qa_pixel')
+    ).getNumber('CLOUDS')
     
     full_size = cloud_mask.reduceRegion(
         reducer = ee.Reducer.count(),
         geometry = dgo_shape.geometry(),
         scale = scale
-    ).getNumber('qa_pixel')
+    ).getNumber('CLOUDS')
     
-    cloudy_size = full_size.subtract(nocloud_size)
     cloud_score = cloudy_size.divide(full_size).multiply(100)
 
     return cloud_score
+
+
+def calculateCoverage(image, dgo_shape, scale=30):
+    # Calculate how much an image cover a DGO
+    
+    unmasked = image.unmask(1)
+    
+    total_pixels = unmasked.reduceRegion(
+        reducer = ee.Reducer.count(),
+        geometry = dgo_shape.geometry(),
+        scale = scale,
+        maxPixels = 1e13
+    ).getNumber('red')
+    
+    act_pixels = image.reduceRegion(
+        reducer = ee.Reducer.count(),
+        geometry = dgo_shape.geometry(),
+        scale = scale,
+        maxPixels = 1e13
+    ).getNumber('red')
+    
+    coverage_score = act_pixels.divide(total_pixels).multiply(100).round()
+
+    return coverage_score
 
 
 def calculateWaterMetrics(image, dgo, scale=30, simplify_tolerance=1.5):
@@ -177,12 +197,14 @@ def dgoMetrics(image):
         #TODO: clip image to DGO bounds
                 
         cloud_score = calculateCloudScore(image, dgo_shape)
+        coverage_score = calculateCoverage(image, dgo_shape)
         water_metrics = calculateWaterMetrics(image, dgo_shape)
         vegetation_metrics = calculateVegetationMetrics(image, dgo_shape)
         ac_metrics = calculateACMetrics(image, dgo_shape)
         
         return dgo_shape.set({'LANDSAT_PRODUCT_ID': image.get('LANDSAT_PRODUCT_ID'), 
                               'CLOUD_SCORE': cloud_score, 
+                              'COVERAGE_SCORE': coverage_score,
                               **water_metrics,
                               **vegetation_metrics,
                               **ac_metrics})

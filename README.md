@@ -24,6 +24,4 @@ The `notebook.ipynb` file contains example of how to use the ee-waterextraction 
 
 # TODO
 
-- [ ] Add AOI surface / Image coverage
-- [ ] Fix cloud score
 - [ ] Optimize DGO metrics mapping
