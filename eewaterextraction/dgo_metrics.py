@@ -17,7 +17,7 @@ def calculateCloudScore(image, dgo_shape, scale=30):
         scale = scale
     ).getNumber('CLOUDS')
     
-    cloud_score = cloudy_size.divide(full_size).multiply(100)
+    cloud_score = cloudy_size.divide(full_size).multiply(100).round()
 
     return cloud_score
 
@@ -27,14 +27,9 @@ def calculateCoverage(image, dgo_shape, scale=30):
     
     unmasked = image.unmask(1)
     
-    total_pixels = unmasked.reduceRegion(
-        reducer = ee.Reducer.count(),
-        geometry = dgo_shape.geometry(),
-        scale = scale,
-        maxPixels = 1e13
-    ).getNumber('red')
+    total_pixels = dgo_shape.area(maxError=1, proj=image.projection())
     
-    act_pixels = image.reduceRegion(
+    act_pixels = unmasked.reduceRegion(
         reducer = ee.Reducer.count(),
         geometry = dgo_shape.geometry(),
         scale = scale,
@@ -191,44 +186,57 @@ def calculateACMetrics(image, dgo, scale=30, simplify_tolerance=1.5):
     return results
 
 
-def dgoMetrics(image):
-    def mapDGO(dgo_shape):
-        
-        #TODO: clip image to DGO bounds
-                
-        cloud_score = calculateCloudScore(image, dgo_shape)
-        coverage_score = calculateCoverage(image, dgo_shape)
-        water_metrics = calculateWaterMetrics(image, dgo_shape)
-        vegetation_metrics = calculateVegetationMetrics(image, dgo_shape)
-        ac_metrics = calculateACMetrics(image, dgo_shape)
-        
-        return dgo_shape.set({'LANDSAT_PRODUCT_ID': image.get('LANDSAT_PRODUCT_ID'), 
-                              'CLOUD_SCORE': cloud_score, 
-                              'COVERAGE_SCORE': coverage_score,
-                              **water_metrics,
-                              **vegetation_metrics,
-                              **ac_metrics})
-    return mapDGO
-    
-    
-def imageMetrics(dgos):
-    def mapImage(image):
-        
-        metrics = dgos.map(dgoMetrics(image))
-                               
-        return metrics
-    
-    return mapImage
+def dgoMetrics(collection):
+    def mapDGO(dgo):
+        # Filtrer la collection d'images sur l'emprise du DGO traité
+        dgo_images_collection = collection.filterBounds(dgo.geometry())
 
+        # Définir une fonction qui ajoute les métriques d'une image à la liste des métriques du DGO
+        def addMetrics(image, metrics_list):
+            # Récupérer la Feature du DGO qui est stocké dans le premier élément de la liste
+            dgo = ee.Feature(ee.List(metrics_list).get(0))
+            
+            # Calculer les métriques
+            cloud_score = calculateCloudScore(image, dgo)
+            coverage_score = calculateCoverage(image, dgo)
+            water_metrics = calculateWaterMetrics(image, dgo)
+            vegetation_metrics = calculateVegetationMetrics(image, dgo)
+            ac_metrics = calculateACMetrics(image, dgo)
+            
+            # Créer un dictionnaire avec toutes les métriques
+            image_metrics = ee.Dictionary({
+                                        'AXIS_FID': dgo.get('AXIS_FID'),
+                                        'DGO_FID': dgo.get('DGO_FID'),
+                                        'LANDSAT_PRODUCT_ID': image.get('LANDSAT_PRODUCT_ID'),
+                                        'DATE_ACQUIRED': image.get('DATE_ACQUIRED'),
+                                        'CLOUD_SCORE': cloud_score, 
+                                        'COVERAGE_SCORE': coverage_score,
+                                        **water_metrics,
+                                        **vegetation_metrics,
+                                        **ac_metrics
+                                        })
+            
+            # Ajouter ce dictionnaire à la liste des métriques
+            return ee.List(metrics_list).add(image_metrics)
+
+        # Stocker le DGO traité dans le premier élément de la liste
+        first = ee.List([dgo])
+
+        # Ajouter les métriques calculées sur chaque image à la liste
+        metrics = dgo_images_collection.iterate(addMetrics, first)
+
+        # Supprimer le DGO traité de la liste pour alléger le résultat
+        metrics = ee.List(metrics).remove(dgo)
+
+        # Renvoyer la Feature en ajoutant l'attribut metrics
+        return dgo.set({'metrics': metrics})
+    return mapDGO
 
 
 def calculateDGOsMetrics(collection, dgos):
+    # Ajouter les listes de métriques aux attributs des DGOs
+    metrics = dgos.map(dgoMetrics(collection))
     
-    collection = collection.filterBounds(dgos.union(1))
-    
-    metrics = collection.map(imageMetrics(dgos))
-    
-    metrics = metrics.flatten()
-    
-    return metrics
+    # Retourner uniquement les métriques (pas la Feature complète)
+    return metrics.aggregate_array('metrics')
 
