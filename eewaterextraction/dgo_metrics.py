@@ -204,17 +204,15 @@ def dgoMetrics(collection):
             ac_metrics = calculateACMetrics(image, dgo)
             
             # Créer un dictionnaire avec toutes les métriques
-            image_metrics = ee.Dictionary({
-                                        'AXIS_FID': dgo.get('AXIS_FID'),
-                                        'DGO_FID': dgo.get('DGO_FID'),
-                                        'LANDSAT_PRODUCT_ID': image.get('LANDSAT_PRODUCT_ID'),
-                                        'DATE_ACQUIRED': image.get('DATE_ACQUIRED'),
-                                        'CLOUD_SCORE': cloud_score, 
-                                        'COVERAGE_SCORE': coverage_score,
-                                        **water_metrics,
-                                        **vegetation_metrics,
-                                        **ac_metrics
-                                        })
+            image_metrics = dgo.set({
+                                     'LANDSAT_PRODUCT_ID': image.get('LANDSAT_PRODUCT_ID'),
+                                     'DATE_ACQUIRED': image.get('DATE_ACQUIRED'),
+                                     'CLOUD_SCORE': cloud_score, 
+                                     'COVERAGE_SCORE': coverage_score,
+                                     **water_metrics,
+                                     **vegetation_metrics,
+                                     **ac_metrics
+                                    })
             
             # Ajouter ce dictionnaire à la liste des métriques
             return ee.List(metrics_list).add(image_metrics)
@@ -236,7 +234,10 @@ def dgoMetrics(collection):
 def calculateDGOsMetrics(collection, dgos):
     # Ajouter les listes de métriques aux attributs des DGOs
     metrics = dgos.map(dgoMetrics(collection))
+
+    # Dé-empiler les métriques stockées dans un attribut de la FeatureCollection
+    unnested = ee.FeatureCollection(metrics.aggregate_array('metrics').flatten())
     
     # Retourner uniquement les métriques (pas la Feature complète)
-    return metrics.aggregate_array('metrics')
+    return unnested
 
