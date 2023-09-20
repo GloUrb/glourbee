@@ -214,8 +214,11 @@ def dgoMetrics(collection):
                                      **ac_metrics
                                     })
             
+            # Filtrer si le DGO est 100% couvert de nuages
+            output_list = ee.Algorithms.If(ee.Number(cloud_score).gte(ee.Number(100)), ee.List(metrics_list), ee.List(metrics_list).add(image_metrics))
+            
             # Ajouter ce dictionnaire à la liste des métriques
-            return ee.List(metrics_list).add(image_metrics)
+            return output_list
 
         # Stocker le DGO traité dans le premier élément de la liste
         first = ee.List([dgo])
