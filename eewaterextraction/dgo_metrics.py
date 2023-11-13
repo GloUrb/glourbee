@@ -205,8 +205,7 @@ def dgoMetrics(collection):
             
             # Créer un dictionnaire avec toutes les métriques
             image_metrics = dgo.set({
-                                     'LANDSAT_PRODUCT_ID': image.get('LANDSAT_PRODUCT_ID'),
-                                     'DATE_ACQUIRED': image.get('DATE_ACQUIRED'),
+                                     'DATE': ee.Date(image.get('system:time_start')).format("YYYY-MM-dd"),
                                      'CLOUD_SCORE': cloud_score, 
                                      'COVERAGE_SCORE': coverage_score,
                                      **water_metrics,
@@ -240,7 +239,7 @@ def calculateDGOsMetrics(collection, dgos):
 
     # Dé-empiler les métriques stockées dans un attribut de la FeatureCollection
     unnested = ee.FeatureCollection(metrics.aggregate_array('metrics').flatten())
-    
+
     # Retourner uniquement les métriques (pas la Feature complète)
     return unnested
 

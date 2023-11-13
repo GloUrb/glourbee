@@ -1,6 +1,6 @@
 import ee
 import geemap
-import pandas as pd
+from geetools import tools
 
 
 def maskClouds(image):
@@ -14,7 +14,7 @@ def maskClouds(image):
     return image.updateMask(clouds).addBands(clouds)
 
 
-def getLandsatCollection(start=ee.Date('1980-01-01'), end=ee.Date('2100-01-01'), cloud_masking=True, cloud_filter=None, roi=None):  
+def getLandsatCollection(start=ee.Date('1980-01-01'), end=ee.Date('2100-01-01'), cloud_masking=True, cloud_filter=None, roi=None, mosaic_same_day=False):  
     '''
     Documentation
     '''
@@ -42,6 +42,10 @@ def getLandsatCollection(start=ee.Date('1980-01-01'), end=ee.Date('2100-01-01'),
     # Masquage des nuages restants
     if cloud_masking:
         landsat_collection = landsat_collection.map(maskClouds)
+
+    # Mosaiquage par jour de prise de vue pour réduire la taille de la collection
+    if mosaic_same_day:
+        landsat_collection = tools.imagecollection.mosaicSameDay(landsat_collection)
     
     return landsat_collection
 
