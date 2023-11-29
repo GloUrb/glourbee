@@ -129,3 +129,5 @@ dmypy.json
 .pyre/
 
 earthengine-key.json
+example_data/*_gcs.*
+example_data/*.tmp.csv
