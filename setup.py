@@ -14,6 +14,7 @@ setup(
         'geetools',
         'ipython',
         'ipykernel',
-        'ipyleaflet==0.16'
+        'ipyleaflet==0.16',
+        'streamlit'
     ],
 )
