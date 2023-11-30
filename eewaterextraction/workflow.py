@@ -76,11 +76,13 @@ def workflowState(run_id):
     completed = len([t for t in tasks if t['state'] == 'COMPLETED'])
     running = len([t for t in tasks if t['state'] == 'RUNNING'])
     pending = len([t for t in tasks if t['state'] == 'PENDING'])
+    ready = len([t for t in tasks if t['state'] == 'READY'])
     failed = len([t for t in tasks if t['state'] == 'FAILED'])
 
     print(f'{completed} tasks completed.')
     print(f'{running} tasks running.')
     print(f'{pending} tasks pending.')
+    print(f'{ready} tasks ready.')
     print(f'{failed} tasks failed.')
 
     return tasks
