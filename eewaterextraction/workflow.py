@@ -4,6 +4,7 @@ import uuid
 import numpy as np
 import pandas as pd
 from urllib.request import urlretrieve
+from urllib.error import HTTPError
 
 from . import (
     classification,
@@ -105,30 +106,38 @@ def getResults(run_id, ee_project_name, output_csv, overwrite=False, remove_tmp=
     assets = [f'projects/{ee_project_name}/assets/{uri}' for uri in uris]
     temp_csv_list = [os.path.join(os.path.dirname(output_csv), f'{os.path.basename(a)}.tmp.csv') for a in assets]
 
+    properties_list = [
+        'DATE',
+        'AC_AREA',
+        'CLOUD_SCORE',
+        'COVERAGE_SCORE',
+        'DATE_ACQUIRED',
+        'DGO_FID',
+        'MEAN_AC_MNDWI',
+        'MEAN_AC_NDVI',
+        'MEAN_MNDWI',
+        'MEAN_NDVI',
+        'MEAN_VEGETATION_MNDWI',
+        'MEAN_VEGETATION_NDVI',
+        'MEAN_WATER_MNDWI',
+        'VEGETATION_AREA',
+        'VEGETATION_PERIMETER',
+        'WATER_AREA',
+        'WATER_PERIMETER']
+    
     for assetName, path in zip(assets, temp_csv_list):
         if not os.path.exists(path) or overwrite:
             asset = ee.FeatureCollection(assetName)
-            clean_fc = asset.select(propertySelectors=[
-                                'DATE',
-                                'AC_AREA',
-                                'CLOUD_SCORE',
-                                'COVERAGE_SCORE',
-                                'DATE_ACQUIRED',
-                                'DGO_FID',
-                                'MEAN_AC_MNDWI',
-                                'MEAN_AC_NDVI',
-                                'MEAN_MNDWI',
-                                'MEAN_NDVI',
-                                'MEAN_VEGETATION_MNDWI',
-                                'MEAN_VEGETATION_NDVI',
-                                'MEAN_WATER_MNDWI',
-                                'VEGETATION_AREA',
-                                'VEGETATION_PERIMETER',
-                                'WATER_AREA',
-                                'WATER_PERIMETER'],
+            clean_fc = asset.select(propertySelectors=properties_list,
                             retainGeometry=False)
-            
-            urlretrieve(clean_fc.getDownloadUrl(), path)
+            try:
+                urlretrieve(clean_fc.getDownloadUrl(), path)
+            except HTTPError:
+                # Si c'est impossible de télécharger l'asset nettoyé, télécharger l'asset complet et le nettoyer localement
+                urlretrieve(asset.getDownloadUrl(), path)
+                df = pd.read_csv(path, index_col=None, header=0)
+                df = df[properties_list]
+                df.to_csv(path)
         else:
             continue
 
