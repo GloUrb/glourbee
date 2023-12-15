@@ -9,7 +9,7 @@ import tempfile
 from urllib.request import urlretrieve
 from urllib.error import HTTPError
 
-from . import (
+from glourbee import (
     classification,
     data_management,
     dgo_indicators,

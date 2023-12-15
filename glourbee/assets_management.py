@@ -70,7 +70,7 @@ def uploadDGOs(dgo_shapefile_path, simplify_tolerance=15, ee_project_name='ee-gl
         # Uploader l'asset
         assetName = f'{os.path.splitext(os.path.basename(dgo_shapefile_path))[0]}_{uuid.uuid4().hex}'
         assetId = f'projects/{ee_project_name}/assets/dgos/{assetName}'
-        if uploadAsset(dgo_shp, 'DGOs uploaded from ee-water-extraction notebook', assetId):
+        if uploadAsset(dgo_shp, 'DGOs uploaded from glourbee notebook', assetId):
             # Renvoyer l'asset exporté et son id
             return(assetId, ee.FeatureCollection(assetId))
         else:
@@ -90,7 +90,7 @@ def uploadDGOs(dgo_shapefile_path, simplify_tolerance=15, ee_project_name='ee-gl
             # Uploader l'asset
             assetName = f'{os.path.splitext(os.path.basename(dgo_shapefile_path))[0]}_{uuid.uuid4().hex}'
             assetId = f'projects/{ee_project_name}/assets/dgos/tmp/{assetName}'
-            taskid = uploadAsset(dgo_shp, 'DGOs uploaded from ee-water-extraction notebook', assetId, wait=False)
+            taskid = uploadAsset(dgo_shp, 'DGOs uploaded from glourbee notebook', assetId, wait=False)
             
             if taskid:
                 # Ajouter l'assetId à la liste à fusionner
@@ -112,7 +112,7 @@ def uploadDGOs(dgo_shapefile_path, simplify_tolerance=15, ee_project_name='ee-gl
         # Uploader l'asset
         assetName = f'{os.path.splitext(os.path.basename(dgo_shapefile_path))[0]}_final_{uuid.uuid4().hex}'
         assetId = f'projects/{ee_project_name}/assets/dgos/{assetName}'
-        if uploadAsset(output_fc, 'DGOs uploaded from ee-water-extraction notebook', assetId):
+        if uploadAsset(output_fc, 'DGOs uploaded from glourbee notebook', assetId):
             # Supprimer les assets temporaires
             for asset in assets_list:
                 ee.data.deleteAsset(asset)
@@ -128,7 +128,7 @@ def downloadMetrics(metrics, output_file, ee_project_name='ee-glourb'):
     # Calculer l'asset
     assetName = f'{os.path.splitext(os.path.basename(output_file))[0]}_{uuid.uuid4().hex}'
     assetId = f'projects/{ee_project_name}/assets/metrics/{assetName}'
-    if not uploadAsset(metrics, 'Metrics uploaded from ee-water-extraction notebook', assetId):
+    if not uploadAsset(metrics, 'Metrics uploaded from glourbee notebook', assetId):
         return #TODO: replace by raise error
     else:
         # Recharger l'asset

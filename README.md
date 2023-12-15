@@ -1,10 +1,10 @@
-# GEE water extraction
+# GloUrbEE - Extract GloUrb metrics and indicators from Google Earth Engine
 
 # Installation
 
 - Windows
 ```bash
-python -m venv env --prompt ee-water-extraction
+python -m venv env --prompt glourbee
 .\env\Scripts\activate
 python -m pip install -U pip
 python -m pip install -e .
@@ -12,7 +12,7 @@ python -m pip install -e .
 
 - Linux
 ```bash
-python -m venv env --prompt ee-water-extraction
+python -m venv env --prompt glourbee
 source env/bin/activate
 python -m pip install -U pip
 python -m pip install -e .
@@ -20,7 +20,7 @@ python -m pip install -e .
 
 # Example usage
 
-The `notebook.ipynb` file contains example of how to use the ee-waterextraction tool.
+The `notebook.ipynb` file contains example of how to use the GloUrbEE tool.
 
 # Data extracted
 ## Metrics
