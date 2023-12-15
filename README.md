@@ -31,15 +31,19 @@ The `notebook.ipynb` file contains example of how to use the GloUrbEE tool.
 | COVERAGE_SCORE | Percent of the DGO covered by the Landsat image (%) |
 | MEAN_AC_MNDWI | Mean MNDWI in the active channel surface |
 | MEAN_AC_NDVI | Mean NDVI in the active channel surface |
-| MEAN_DRY_MNDWI | Mean MNDWI in the surface which is not water  |
+| ~~MEAN_DRY_MNDWI~~ | ~~Mean MNDWI in the surface which is not water~~  |
 | MEAN_MNDWI | Mean MNDWI of the full DGO |
 | MEAN_NDVI| Mean NDVI of the full DGO |
 | MEAN_VEGETATION_MNDWI | Mean MNDWI in the vegetation surface |
 | MEAN_VEGETATION_NDVI | Mean NDVI in the vegetation surface |
 | MEAN_WATER_MNDWI | Mean MNDWI in the water surface |
 | VEGETATION_AREA | Vegetation area (pixels) |
+| VEGETATION_POLYGONS | Number of vegetation patches inside the DGO |
+| VEGETATION_POLYGONS_p* | Percentiles of the vegetation patches size (in pixels) inside the DGO |
 | VEGETATION_PERIMETER | Vegetation surface perimeter (projection unit) |
 | WATER_AREA | Water area (pixels) |
+| WATER_POLYGONS | Number of water patches inside the DGO |
+| WATER_POLYGONS_p* | Percentiles of the water patches size (in pixels) inside the DGO |
 | WATER_PERIMETER | Water surface perimeter (projection unit) |
 
 ## Indicators
@@ -53,7 +57,5 @@ The `notebook.ipynb` file contains example of how to use the GloUrbEE tool.
 | max_extent | Surface where water has ever been detected (JRC Global Surface Water Mapping) |
 
 # TODO
-- Nombre de polygones par classe par DGO
-- Quartiles, Moyenne et D90 de la surface de ces polygones
 - Changer le filtre modal par un tamisage
-- Ajouter JRC Surface Water par DGO (```ee.Image("JRC/GSW1_4/GlobalSurfaceWater")```)
+- Ajouter *transition* du JRC Surface Water

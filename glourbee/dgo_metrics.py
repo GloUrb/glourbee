@@ -52,47 +52,61 @@ def calculateWaterMetrics(image, dgo, scale=30, simplify_tolerance=1.5):
     
     # Séparer les surfaces en eau et les surfaces émergées
     vector_water = water.filter("label == 1")
-    vector_dry = water.filter("label == 0")
+    # vector_dry = water.filter("label == 0")
     
-    # Initialisation du dictionnaire des résultats
-    results = dict()
-    
-    # Calculer l'aire des surfaces en eau
-    results['WATER_AREA'] = image.select('WATER').reduceRegion(
-        reducer = ee.Reducer.sum(),
-        geometry = vector_water,
-        scale = scale
-    ).getNumber('WATER')
-    
-    # Simplifier les géométries
+    # Simplifier les géométries pour le périmètre
     geoms_water = vector_water.geometry().simplify(scale*simplify_tolerance)
-    
-    # Calucler les périmètres
-    results['WATER_PERIMETER'] = geoms_water.perimeter(scale)
-    
-    # Calcul du mndwi moyen des surfaces en eau
-    results['MEAN_WATER_MNDWI'] = image.select('MNDWI').reduceRegion(
-        reducer = ee.Reducer.mean(),
-        geometry = vector_water,
-        scale = scale
-        ).getNumber('MNDWI')
-    
-    # Calcul du mndwi moyen des surfaces émergées
-    results['MEAN_DRY_MNDWI'] = image.select('MNDWI').reduceRegion(
-        reducer = ee.Reducer.mean(),
-        geometry = vector_dry,
-        scale = scale
-        ).getNumber('MNDWI')
-    
-    # Calcul du mndwi moyen de tout le DGO
-    results['MEAN_MNDWI'] = image.select('MNDWI').reduceRegion(
-        reducer = ee.Reducer.mean(),
-        geometry = dgo.geometry(),
-        scale = scale
-        ).getNumber('MNDWI')
+
+    # Calculer les percentiles de taille de polygones
+    water_percentiles = vector_water.aggregate_array('count').reduce(ee.Reducer.percentile(
+        percentiles=[0,25,50,75,90,100],
+        outputNames=['WATER_POLYGONS_p0',
+                    'WATER_POLYGONS_p25',
+                    'WATER_POLYGONS_p50',
+                    'WATER_POLYGONS_p75',
+                    'WATER_POLYGONS_p90',
+                    'WATER_POLYGONS_p100'
+                    ]
+    ))
+
+    # Initialisation du dictionnaire des résultats
+    results = ee.Dictionary(water_percentiles).combine(ee.Dictionary({
+        # Calculer le nombre de polygones d'eau
+        'WATER_POLYGONS': vector_water.size(),
+
+        # Calculer l'aire des surfaces en eau
+        'WATER_AREA': image.select('WATER').reduceRegion(
+                reducer = ee.Reducer.sum(),
+                geometry = vector_water,
+                scale = scale
+            ).getNumber('WATER'),
+
+        # Calculer les périmètres
+        'WATER_PERIMETER': geoms_water.perimeter(scale),
+
+        # Calcul du mndwi moyen des surfaces en eau
+        'MEAN_WATER_MNDWI': image.select('MNDWI').reduceRegion(
+                reducer = ee.Reducer.mean(),
+                geometry = vector_water,
+                scale = scale
+            ).getNumber('MNDWI'),
+
+        # # Calcul du mndwi moyen des surfaces émergées
+        # 'MEAN_DRY_MNDWI': image.select('MNDWI').reduceRegion(
+        #         reducer = ee.Reducer.mean(),
+        #         geometry = vector_dry,
+        #         scale = scale
+        #     ).getNumber('MNDWI'),
+
+        # Calcul du mndwi moyen de tout le DGO
+        'MEAN_MNDWI': image.select('MNDWI').reduceRegion(
+                reducer = ee.Reducer.mean(),
+                geometry = dgo.geometry(),
+                scale = scale
+            ).getNumber('MNDWI'),
+    }))
     
     return results
-
 
 
 def calculateVegetationMetrics(image, dgo, scale=30, simplify_tolerance=1.5):
@@ -107,42 +121,57 @@ def calculateVegetationMetrics(image, dgo, scale=30, simplify_tolerance=1.5):
     # Séparer les surfaces végétation du reste
     vector_vegetation = vectors.filter("label == 1")
     
-    # Initialisation du dictionnaire des résultats
-    results = dict()
-
-    # Calculer l'aire des surfaces végétation
-    results['VEGETATION_AREA'] = image.select('VEGETATION').reduceRegion(
-        reducer = ee.Reducer.sum(),
-        geometry = vector_vegetation,
-        scale = scale
-    ).getNumber('VEGETATION')
-    
-    # Simplifier les géométries
+    # Simplifier les géométries pour le périmètre.
     geom_vegetation = vector_vegetation.geometry().simplify(scale*simplify_tolerance)
-    
-    # Calucler les périmètres
-    results['VEGETATION_PERIMETER'] = geom_vegetation.perimeter(scale)
-    
-    # Calcul du ndvi moyen des surfaces végétation
-    results['MEAN_VEGETATION_NDVI'] = image.select('NDVI').reduceRegion(
-        reducer = ee.Reducer.mean(),
-        geometry = vector_vegetation,
-        scale = scale
-        ).getNumber('NDVI')
-    
-    # Calcul du mndwi moyen des surfaces végétation
-    results['MEAN_VEGETATION_MNDWI'] = image.select('MNDWI').reduceRegion(
-        reducer = ee.Reducer.mean(),
-        geometry = vector_vegetation,
-        scale = scale
-        ).getNumber('MNDWI')
-    
-    # Calcul du ndvi moyen de tout le DGO
-    results['MEAN_NDVI'] = image.select('NDVI').reduceRegion(
-        reducer = ee.Reducer.mean(),
-        geometry = dgo.geometry(),
-        scale = scale
-        ).getNumber('NDVI')
+
+    # Calculer les percentiles de taille de polygones
+    veget_percentiles = vector_vegetation.aggregate_array('count').reduce(ee.Reducer.percentile(
+        percentiles=[0,25,50,75,90,100],
+        outputNames=['VEGETATION_POLYGONS_p0',
+                    'VEGETATION_POLYGONS_p25',
+                    'VEGETATION_POLYGONS_p50',
+                    'VEGETATION_POLYGONS_p75',
+                    'VEGETATION_POLYGONS_p90',
+                    'VEGETATION_POLYGONS_p100'
+                    ]
+    ))
+
+    # Initialisation du dictionnaire des résultats
+    results = ee.Dictionary(veget_percentiles).combine(ee.Dictionary({
+        # Calculer le nombre de polygones
+        'VEGETATION_POLYGONS': vector_vegetation.size(),
+
+        # Calculer l'aire des surfaces végétation
+        'VEGETATION_AREA': image.select('VEGETATION').reduceRegion(
+            reducer = ee.Reducer.sum(),
+            geometry = vector_vegetation,
+            scale = scale
+        ).getNumber('VEGETATION'),
+        
+        # Calucler les périmètres
+        'VEGETATION_PERIMETER': geom_vegetation.perimeter(scale),
+        
+        # Calcul du ndvi moyen des surfaces végétation
+        'MEAN_VEGETATION_NDVI': image.select('NDVI').reduceRegion(
+            reducer = ee.Reducer.mean(),
+            geometry = vector_vegetation,
+            scale = scale
+            ).getNumber('NDVI'),
+        
+        # Calcul du mndwi moyen des surfaces végétation
+        'MEAN_VEGETATION_MNDWI': image.select('MNDWI').reduceRegion(
+            reducer = ee.Reducer.mean(),
+            geometry = vector_vegetation,
+            scale = scale
+            ).getNumber('MNDWI'),
+        
+        # Calcul du ndvi moyen de tout le DGO
+        'MEAN_NDVI': image.select('NDVI').reduceRegion(
+            reducer = ee.Reducer.mean(),
+            geometry = dgo.geometry(),
+            scale = scale
+            ).getNumber('NDVI'),
+    }))
         
     return results
 
@@ -160,29 +189,29 @@ def calculateACMetrics(image, dgo, scale=30, simplify_tolerance=1.5):
     vector_ac = vectors.filter("label == 1")
     
     # Initialisation du dictionnaire des résultats
-    results = dict()
-
-    # Calculer l'aire des surfaces végétation
-    results['AC_AREA'] = image.select('AC').reduceRegion(
-        reducer = ee.Reducer.sum(),
-        geometry = vector_ac,
-        scale = scale
-    ).getNumber('AC')
-    
-    # Calcul du ndvi moyen des surfaces végétation
-    results['MEAN_AC_NDVI'] = image.select('NDVI').reduceRegion(
-        reducer = ee.Reducer.mean(),
-        geometry = vector_ac,
-        scale = scale
-        ).getNumber('NDVI')
-    
-    # Calcul du mndwi moyen des surfaces végétation
-    results['MEAN_AC_MNDWI'] = image.select('MNDWI').reduceRegion(
-        reducer = ee.Reducer.mean(),
-        geometry = vector_ac,
-        scale = scale
-        ).getNumber('MNDWI')
+    results = ee.Dictionary({
+        # Calculer l'aire des surfaces végétation
+        'AC_AREA': image.select('AC').reduceRegion(
+            reducer = ee.Reducer.sum(),
+            geometry = vector_ac,
+            scale = scale
+        ).getNumber('AC'),
         
+        # Calcul du ndvi moyen des surfaces végétation
+        'MEAN_AC_NDVI': image.select('NDVI').reduceRegion(
+            reducer = ee.Reducer.mean(),
+            geometry = vector_ac,
+            scale = scale
+            ).getNumber('NDVI'),
+        
+        # Calcul du mndwi moyen des surfaces végétation
+        'MEAN_AC_MNDWI': image.select('MNDWI').reduceRegion(
+            reducer = ee.Reducer.mean(),
+            geometry = vector_ac,
+            scale = scale
+            ).getNumber('MNDWI'),
+    })
+
     return results
 
 
@@ -204,14 +233,11 @@ def dgoMetrics(collection):
             ac_metrics = calculateACMetrics(image, dgo)
             
             # Créer un dictionnaire avec toutes les métriques
-            image_metrics = dgo.set({
+            image_metrics = dgo.set(ee.Dictionary({
                                      'DATE': ee.Date(image.get('system:time_start')).format("YYYY-MM-dd"),
                                      'CLOUD_SCORE': cloud_score, 
                                      'COVERAGE_SCORE': coverage_score,
-                                     **water_metrics,
-                                     **vegetation_metrics,
-                                     **ac_metrics
-                                    })
+                                    }).combine(water_metrics).combine(vegetation_metrics).combine(ac_metrics))
             
             # Filtrer si le DGO est 100% couvert de nuages
             output_list = ee.Algorithms.If(ee.Number(cloud_score).gte(ee.Number(100)), ee.List(metrics_list), ee.List(metrics_list).add(image_metrics))
