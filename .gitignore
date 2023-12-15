@@ -131,3 +131,5 @@ dmypy.json
 earthengine-key.json
 example_data/*_gcs.*
 example_data/*.tmp.csv
+
+notebook.local.ipynb

@@ -3,15 +3,20 @@ import os
 import uuid
 import numpy as np
 import pandas as pd
+
+import tempfile
+
 from urllib.request import urlretrieve
 from urllib.error import HTTPError
 
 from . import (
     classification,
     data_management,
+    dgo_indicators,
     dgo_metrics
 )
 
+tempdir = tempfile.mkdtemp(prefix='glourbee_')
 
 def startWorkflow(dgo_asset: str,
                   ee_project_name: str = 'ee-glourb',
@@ -104,7 +109,7 @@ def getResults(run_id, ee_project_name, output_csv, overwrite=False, remove_tmp=
     uris = [uri.split(f'{ee_project_name}/assets/')[1] for sublist in stacked_uris for uri in sublist]
 
     assets = [f'projects/{ee_project_name}/assets/{uri}' for uri in uris]
-    temp_csv_list = [os.path.join(os.path.dirname(output_csv), f'{os.path.basename(a)}.tmp.csv') for a in assets]
+    temp_csv_list = [os.path.join(tempdir, f'{os.path.basename(a)}.tmp.csv') for a in assets]
 
     properties_list = [
         'DATE',
@@ -161,3 +166,25 @@ def cleanAssets(run_id, ee_project_name):
     assets_list = [f'projects/{ee_project_name}/assets/{uri}' for uri in uris]
     for asset in assets_list:
         ee.data.deleteAsset(asset)
+
+
+def indicatorsWorkflow(dgos_asset, output_csv):
+    metrics = dgo_indicators.calculateGSWindicators(dgos_asset)
+
+    properties_list = ['DGO_FID',
+            'occurrence.*',
+            'change_abs.*',
+            'change_norm.*',
+            'seasonality.*',
+            'recurrence.*',
+            'max_extent.*',
+    ]
+
+    clean_fc = metrics.select(propertySelectors=properties_list, retainGeometry=False)
+    
+    temp_metrics = os.path.join(tempdir, 'gsw_metrics_output.csv')
+    urlretrieve(clean_fc.getDownloadUrl(), temp_metrics)
+
+    df = pd.read_csv(temp_metrics)
+    df.drop(['system:index', '.geo'], axis=1, inplace=True)
+    df.to_csv(output_csv)

@@ -22,8 +22,8 @@ python -m pip install -e .
 
 The `notebook.ipynb` file contains example of how to use the ee-waterextraction tool.
 
-# Metrics extracted
-
+# Data extracted
+## Metrics
 | metric name | description |   
 |---|---|
 | AC_AREA | Active Channel area (pixels) |
@@ -41,3 +41,19 @@ The `notebook.ipynb` file contains example of how to use the ee-waterextraction 
 | VEGETATION_PERIMETER | Vegetation surface perimeter (projection unit) |
 | WATER_AREA | Water area (pixels) |
 | WATER_PERIMETER | Water surface perimeter (projection unit) |
+
+## Indicators
+| indicator name | description |   
+|---|---|
+| occurrence_p* | The frequency with which water was present (JRC Global Surface Water Mapping) |
+| change_abs_p* | Absolute change in occurrence between two epochs: 1984-1999 vs 2000-2021 (JRC Global Surface Water Mapping) |
+| change_norm_p* | Normalized change in occurrence. (epoch1-epoch2)/(epoch1+epoch2) * 100 (JRC Global Surface Water Mapping) |
+| seasonality_p* | Number of months water is present (JRC Global Surface Water Mapping) |
+| recurrence_p* | The frequency with which water returns from year to year (JRC Global Surface Water Mapping) |
+| max_extent | Surface where water has ever been detected (JRC Global Surface Water Mapping) |
+
+# TODO
+- Nombre de polygones par classe par DGO
+- Quartiles, Moyenne et D90 de la surface de ces polygones
+- Changer le filtre modal par un tamisage
+- Ajouter JRC Surface Water par DGO (```ee.Image("JRC/GSW1_4/GlobalSurfaceWater")```)

@@ -43,6 +43,7 @@ def extractWater(image):
     
     # Filtre modal pour retirer les pixels isolés
     output_img = output_img.focalMode(3)
+    count = output_img.connectedPixelCount(maxSize=100, eightConnected=True)
     
     # Masquer ce qui n'est pas classé
     mask = (output_img.eq(1))
