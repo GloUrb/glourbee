@@ -170,20 +170,9 @@ def cleanAssets(run_id, ee_project_name):
 
 def indicatorsWorkflow(dgos_asset, output_csv):
     metrics = dgo_indicators.calculateGSWindicators(dgos_asset)
-
-    properties_list = ['DGO_FID',
-            'occurrence.*',
-            'change_abs.*',
-            'change_norm.*',
-            'seasonality.*',
-            'recurrence.*',
-            'max_extent.*',
-    ]
-
-    clean_fc = metrics.select(propertySelectors=properties_list, retainGeometry=False)
     
     temp_metrics = os.path.join(tempdir, 'gsw_metrics_output.csv')
-    urlretrieve(clean_fc.getDownloadUrl(), temp_metrics)
+    urlretrieve(metrics.getDownloadUrl(), temp_metrics)
 
     df = pd.read_csv(temp_metrics)
     df.drop(['system:index', '.geo'], axis=1, inplace=True)

@@ -59,14 +59,8 @@ def calculateWaterMetrics(image, dgo, scale=30, simplify_tolerance=1.5):
 
     # Calculer les percentiles de taille de polygones
     water_percentiles = vector_water.aggregate_array('count').reduce(ee.Reducer.percentile(
-        percentiles=[0,25,50,75,90,100],
-        outputNames=['WATER_POLYGONS_p0',
-                    'WATER_POLYGONS_p25',
-                    'WATER_POLYGONS_p50',
-                    'WATER_POLYGONS_p75',
-                    'WATER_POLYGONS_p90',
-                    'WATER_POLYGONS_p100'
-                    ]
+        percentiles=list(range(0,110,10)),
+        outputNames=[f'WATER_POLYGONS_p{pc}' for pc in range(0,110,10)]
     ))
 
     # Initialisation du dictionnaire des résultats
@@ -126,14 +120,8 @@ def calculateVegetationMetrics(image, dgo, scale=30, simplify_tolerance=1.5):
 
     # Calculer les percentiles de taille de polygones
     veget_percentiles = vector_vegetation.aggregate_array('count').reduce(ee.Reducer.percentile(
-        percentiles=[0,25,50,75,90,100],
-        outputNames=['VEGETATION_POLYGONS_p0',
-                    'VEGETATION_POLYGONS_p25',
-                    'VEGETATION_POLYGONS_p50',
-                    'VEGETATION_POLYGONS_p75',
-                    'VEGETATION_POLYGONS_p90',
-                    'VEGETATION_POLYGONS_p100'
-                    ]
+        percentiles=list(range(0,110,10)),
+        outputNames=[f'VEGETATION_POLYGONS_p{pc}' for pc in range(0,110,10)]
     ))
 
     # Initialisation du dictionnaire des résultats

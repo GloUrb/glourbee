@@ -59,3 +59,5 @@ The `notebook.ipynb` file contains example of how to use the GloUrbEE tool.
 # TODO
 - Changer le filtre modal par un tamisage
 - Ajouter *transition* du JRC Surface Water
+- Récupérer tous les champs du shapefile en entrée pour les métriques (indicateurs OK)
+- Gérer les polygones de grande taille au niveau des métriques (indicateurs OK)
