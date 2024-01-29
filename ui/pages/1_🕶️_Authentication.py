@@ -4,8 +4,9 @@
 
 
 import streamlit as st
-import ee_interface_function as eef
+import ee
 import os
+import json
 
 class Authentication:
     """Authentication class to connect to Earth Engine 
@@ -21,14 +22,14 @@ class Authentication:
 
     def show(self):
         current_directory = st.session_state['current_directory']
-        
+
         image_path = os.path.join(current_directory, 'lib/img/logo.svg')
         st.image(image_path,  use_column_width=True, width=5)
         try:
             st.title(self.title)
             if st.session_state['authenticated']:
-                st.markdown('<span style="color:green">You\'re already authenticated </span> :dark_sunglasses:', unsafe_allow_html=True)
-            st.write("Here you can authenticate to Earth Engine with your mail and key (a json file)")
+                st.success(f'You\'re already authenticated as **{st.session_state["user"]}**', icon="🕶️")
+            st.write("Authenticate (or change authenticated user) to Earth Engine with your service account key (a json file)")
 
             if "mail" not in st.session_state.keys():
                 st.session_state['mail'] = "jlimonet@ee-glourb.iam.gserviceaccount.com"
@@ -37,35 +38,39 @@ class Authentication:
             if "uploaded_key" not in st.session_state.keys():
                 st.session_state['uploaded_key_path'] = ""
 
-            mail = st.text_input("mail", value=st.session_state['mail'], help = 'Your mail to authenticate.')
-            key = st.text_input("key", value=st.session_state['key'], help = 'If your json key is in the same folder as the app, else use the file uploader')
-            uploaded_key = st.file_uploader("Upload file", type=["json"], help = 'Here you can upload your json file !')
+            uploaded_key = st.file_uploader("Upload key file", 
+                                            type=["json"], 
+                                            help = 'Here you can upload your json file !', 
+                                            accept_multiple_files=False)
 
             if st.button("Authenticate"):
                 if uploaded_key:
                     self.session_state['uploaded_key_path'] = uploaded_key
+                    bytes_data = uploaded_key.getvalue().decode("utf-8")
+                    
+                    try:
+                        credentials = ee.ServiceAccountCredentials(email=json.loads(bytes_data)['client_email'], 
+                                                                   key_data=bytes_data)
+                        ee.Initialize(credentials)
 
-                if key:
-                    self.session_state['key_path'] = os.path.abspath(
-                        os.path.join(os.getcwd(), str(key))
-                    )
+                        try:
+                            ee.data.listAssets({'parent': 'projects/ee-glourb/assets/dgos'})
+                        
+                            st.session_state['mail'] = json.loads(bytes_data)['client_email']
+                            st.session_state['user'] = st.session_state['mail'].split("@")[0]
+                            self.session_state['authenticated'] = True
 
-                if mail and key or mail and uploaded_key:
-                    if eef.credentials(
-                        str(mail),
-                        self.session_state['key_path'],
-                        self.session_state['uploaded_key_path'],
-                    ):
-                        st.session_state['mail'] = mail
-                        st.write("Authentication successful ! ")
-                        st.write("You can now go about your business :dark_sunglasses:")
-                        self.session_state['authenticated'] = True
-                        # st.write(self.session_state['authenticated'])
-                        # st.write(session_state)
-                    else:
-                        st.write("Authentication failed")
+                            st.balloons()
+                            st.success(f"Authenticated as **{st.session_state['user']}**", icon="🕶️")
+
+                        except ee.EEException as e:
+                            st.error("Your account have no access to the ee-glourb Earth Engine project", icon="🚨")
+
+                    except ee.EEException as e:
+                        st.error("Authentication failed", icon="🚨")
+
                 else:
-                    st.write("Please enter mail and key, or mail and upload a JSON file.")
+                    st.write("Please upload your JSON key file")
             else:
                 st.write("Please enter your credentials.")
 
