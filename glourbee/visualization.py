@@ -2,7 +2,7 @@ import ee
 import geemap
 
 
-def imageVisualization(collection, landsat_id, dgo_shp):
+def imageVisualization(collection, time_starts, dgo_shp):
     
     output_map = geemap.Map()
     output_map.addLayer(dgo_shp, name='DGOs')
@@ -17,7 +17,7 @@ def imageVisualization(collection, landsat_id, dgo_shp):
         font_weight="bold",
     )
     
-    image = collection.filter(ee.Filter.eq('LANDSAT_PRODUCT_ID', landsat_id)).first()
+    image = collection.filter(ee.Filter.eq('system:time_start', time_starts)).first()
     
     #TODO add layers if band exists
     output_map.addLayer(image, {'bands': ['red', 'green', 'blue']}, 'RGB image')

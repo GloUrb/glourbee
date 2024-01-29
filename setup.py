@@ -1,9 +1,9 @@
 from setuptools import setup
 
 setup(
-    name='EeWaterExtraction',
-    version='0.1',
-    py_modules=['eewaterextraction.*'],
+    name='GloUrbEE',
+    version='0.2',
+    py_modules=['glourbee.*'],
     install_requires=[
         'click',
         'numpy',

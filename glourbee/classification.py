@@ -43,10 +43,23 @@ def extractWater(image):
     
     # Filtre modal pour retirer les pixels isolés
     output_img = output_img.focalMode(3)
+
+    # ## Meilleure option : tamisage. Je ne suis pas certain que ça fonctionne a 100% pour le moment.
+    # # Labellisation
+    # object_id = output_img.connectedComponents(ee.Kernel.square(1), maxSize=128)
+
+    # # Mesurer la taille des patch en pixels : résultat dépendant de l'échelle ?
+    # object_size = object_id.select('labels').connectedPixelCount(maxSize=128, eightConnected=True)
+
+    # # Convertir les taille en surfaces m2
+    # pixel_area = ee.Image.pixelArea()
+    # object_area = object_size.multiply(pixel_area)
+    
+    # # Mettre à jour l'image en sortie
+    # output_img = output_img.where(object_area.lt(1800), ee.Number(0))
     
     # Masquer ce qui n'est pas classé
-    mask = (output_img.eq(1))
-    output_img = output_img.updateMask(mask)
+    output_img = output_img.selfMask()
     
     return image.addBands(output_img)
 
