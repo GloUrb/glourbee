@@ -15,6 +15,7 @@ setup(
         'ipython',
         'ipykernel',
         'ipyleaflet==0.16',
-        'streamlit'
+        'streamlit',
+        'streamlit-folium'
     ],
 )

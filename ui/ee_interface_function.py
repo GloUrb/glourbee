@@ -157,15 +157,15 @@ def dgo_to_search(town_to_search, river_to_search):
     list
         list of the matching dgos id and time of upload
     """
-    list_assets = ee.data.listAssets("projects/ee-glourb/assets/dgos")["assets"]
+    list_assets = ee.data.listAssets({'parent': "projects/ee-glourb/assets/dgos"})["assets"]
     id = []
     update_times = []
     for i in range(len(list_assets)):
         id.append(
-            ee.data.listAssets("projects/ee-glourb/assets/dgos")["assets"][i]["id"]
+            ee.data.listAssets({'parent': "projects/ee-glourb/assets/dgos"})["assets"][i]["id"]
         )
         update_times.append(
-            ee.data.listAssets("projects/ee-glourb/assets/dgos")["assets"][i][
+            ee.data.listAssets({'parent': "projects/ee-glourb/assets/dgos"})["assets"][i][
                 "updateTime"
             ]
         )

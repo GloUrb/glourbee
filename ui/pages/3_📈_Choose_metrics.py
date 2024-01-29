@@ -44,8 +44,9 @@ class PageTwo:
         return glourbmetrics_params
 
     def show(self):
-        current_directory = os.getcwd()
-        image_path = f'{current_directory}\logo.svg'
+        import os
+        current_directory = st.session_state['current_directory']
+        image_path = os.path.join(current_directory, 'lib/img/logo.svg')
         st.image(image_path,  use_column_width=True, width=5)
 
         st.title(self.title)

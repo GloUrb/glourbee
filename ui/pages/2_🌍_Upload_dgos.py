@@ -9,8 +9,7 @@ import folium
 import os
 from streamlit_folium import folium_static
 
-current_directory = os.getcwd()
-cities_data = eef.cities(f'{current_directory}\cities.txt')
+current_directory = st.session_state['current_directory']
 
 class PageOne:
     """PageOne class to show the Upload dgos page of the app 
@@ -25,7 +24,7 @@ class PageOne:
         self.ee_project_name = "ee-glourb"
         self.dgo_features = None
         self.session_state = session_state
-        self.cities_data = eef.cities('cities.txt')
+        self.cities_data = eef.cities(os.path.join(current_directory, 'lib/cities.txt'))
         self.list_cities = list(self.cities_data.keys())
         self.id = None
         self.map_container = st.empty() 
@@ -47,8 +46,8 @@ class PageOne:
         folium_static(m)
 
     def show(self):
-        print(f'current directory : {current_directory}')
-        image_path = f'{current_directory}\logo.svg'
+        import os
+        image_path = os.path.join(current_directory, 'lib/img/logo.svg')
         st.image(image_path,  use_column_width=True, width=5)
 
         st.title(self.title)
