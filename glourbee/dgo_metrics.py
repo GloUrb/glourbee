@@ -1,7 +1,7 @@
 import ee
 
 
-def calculateCloudScore(image, dgo_shape, scale=30):
+def calculateCloudScore(image, dgo_shape, scale):
     
     cloud_mask = image.unmask().select('CLOUDS').eq(0)
     
@@ -22,12 +22,12 @@ def calculateCloudScore(image, dgo_shape, scale=30):
     return cloud_score
 
 
-def calculateCoverage(image, dgo_shape, scale=30):
+def calculateCoverage(image, dgo_shape, scale):
     # Calculate how much an image cover a DGO
     
     unmasked = image.unmask(1)
     
-    total_pixels = dgo_shape.area(maxError=1, proj=image.projection())
+    total_pixels = dgo_shape.area(maxError=1, proj=image.select('blue').projection())
     
     act_pixels = unmasked.reduceRegion(
         reducer = ee.Reducer.count(),
@@ -41,7 +41,7 @@ def calculateCoverage(image, dgo_shape, scale=30):
     return coverage_score
 
 
-def calculateWaterMetrics(image, dgo, scale=30, simplify_tolerance=1.5):
+def calculateWaterMetrics(image, dgo, scale, simplify_tolerance=1.5):
     # Vectorisation des surfaces
     water = image.select('WATER').reduceToVectors(
         geometry = dgo.geometry(),
@@ -103,7 +103,7 @@ def calculateWaterMetrics(image, dgo, scale=30, simplify_tolerance=1.5):
     return results
 
 
-def calculateVegetationMetrics(image, dgo, scale=30, simplify_tolerance=1.5):
+def calculateVegetationMetrics(image, dgo, scale, simplify_tolerance=1.5):
     # Vectorisation des surfaces
     vectors = image.select('VEGETATION').reduceToVectors(
         geometry = dgo.geometry(),
@@ -164,7 +164,7 @@ def calculateVegetationMetrics(image, dgo, scale=30, simplify_tolerance=1.5):
     return results
 
 
-def calculateACMetrics(image, dgo, scale=30, simplify_tolerance=1.5):
+def calculateACMetrics(image, dgo, scale, simplify_tolerance=1.5):
     # Vectorisation des surfaces
     vectors = image.select('AC').reduceToVectors(
         geometry = dgo.geometry(),
@@ -203,22 +203,22 @@ def calculateACMetrics(image, dgo, scale=30, simplify_tolerance=1.5):
     return results
 
 
-def dgoMetrics(collection):
+def dgoMetrics(collection, scale):
     def mapDGO(dgo):
         # Filtrer la collection d'images sur l'emprise du DGO traité
         dgo_images_collection = collection.filterBounds(dgo.geometry())
 
         # Définir une fonction qui ajoute les métriques d'une image à la liste des métriques du DGO
-        def addMetrics(image, metrics_list):
+        def addMetrics(image, metrics_list, scale):
             # Récupérer la Feature du DGO qui est stocké dans le premier élément de la liste
             dgo = ee.Feature(ee.List(metrics_list).get(0))
             
             # Calculer les métriques
-            cloud_score = calculateCloudScore(image, dgo)
-            coverage_score = calculateCoverage(image, dgo)
-            water_metrics = calculateWaterMetrics(image, dgo)
-            vegetation_metrics = calculateVegetationMetrics(image, dgo)
-            ac_metrics = calculateACMetrics(image, dgo)
+            cloud_score = calculateCloudScore(image, dgo, scale)
+            coverage_score = calculateCoverage(image, dgo, scale)
+            water_metrics = calculateWaterMetrics(image, dgo, scale)
+            vegetation_metrics = calculateVegetationMetrics(image, dgo, scale)
+            ac_metrics = calculateACMetrics(image, dgo, scale)
             
             # Créer un dictionnaire avec toutes les métriques
             image_metrics = dgo.set(ee.Dictionary({
@@ -237,7 +237,8 @@ def dgoMetrics(collection):
         first = ee.List([dgo])
 
         # Ajouter les métriques calculées sur chaque image à la liste
-        metrics = dgo_images_collection.iterate(addMetrics, first)
+        # Using a lambda function to pass the scale parameter
+        metrics = dgo_images_collection.iterate(lambda image, list: addMetrics(ee.Image(image), list, scale), first)
 
         # Supprimer le DGO traité de la liste pour alléger le résultat
         metrics = ee.List(metrics).remove(dgo)
@@ -249,7 +250,8 @@ def dgoMetrics(collection):
 
 def calculateDGOsMetrics(collection, dgos):
     # Ajouter les listes de métriques aux attributs des DGOs
-    metrics = dgos.map(dgoMetrics(collection))
+    # Use a lambda function to pass the scale argument to mapDGO
+    metrics = dgos.map(lambda dgo: dgoMetrics(collection, scale)(dgo))
 
     # Dé-empiler les métriques stockées dans un attribut de la FeatureCollection
     unnested = ee.FeatureCollection(metrics.aggregate_array('metrics').flatten())

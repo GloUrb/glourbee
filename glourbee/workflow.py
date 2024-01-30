@@ -20,6 +20,7 @@ tempdir = tempfile.mkdtemp(prefix='glourbee_')
 
 def startWorkflow(dgo_asset: str,
                   ee_project_name: str = 'ee-glourb',
+                  satellite_type: str = 'Landsat', # or 'Sentinel-2' 
                   start: str = '1980-01-01',
                   end: str = '2030-12-31',
                   cloud_filter: int = 80,
@@ -40,13 +41,27 @@ def startWorkflow(dgo_asset: str,
         i+=1
         dgo_subset = dgo_features.filter(ee.Filter.inList('DGO_FID', sub.tolist()))
         
-        # Get the landsat image collection for your ROI
-        collection = data_management.getLandsatCollection(start=ee.Date(start), 
-                                                        end=ee.Date(end), 
-                                                        cloud_filter=cloud_filter, # Maximum cloud coverage accepted (%)
-                                                        cloud_masking=cloud_masking, # Set to False if you don't want to mask the clouds on accepted images
-                                                        mosaic_same_day=mosaic_same_day, # Set to False if you don't want to merge all images by day
-                                                        roi=dgo_subset.union(1)) 
+        if satellite_type == 'Landsat':
+            scale = 30
+            # Get the landsat image collection for your ROI
+            collection = data_management.getLandsatCollection(start=ee.Date(start), 
+                                                              end=ee.Date(end), 
+                                                              cloud_filter=cloud_filter, # Maximum cloud coverage accepted (%)
+                                                              cloud_masking=cloud_masking, # Set to False if you don't want to mask the clouds on accepted images
+                                                              mosaic_same_day=mosaic_same_day, # Set to False if you don't want to merge all images by day
+                                                              roi=dgo_subset.union(1)) 
+        elif satellite_type == 'Sentinel-2':
+            scale = 10
+            # Get the Sentinel-2 image collection for your ROI
+            collection = data_management.getSentinelCollection(start=ee.Date(start), 
+                                                              end=ee.Date(end), 
+                                                              cloud_filter=cloud_filter, # Maximum cloud coverage accepted (%)
+                                                              cloud_masking=cloud_masking, # Set to False if you don't want to mask the clouds on accepted images
+                                                              mosaic_same_day=mosaic_same_day, # Set to False if you don't want to merge all images by day
+                                                              roi=dgo_subset.union(1)) 
+        
+        else:
+            print('Satellite dataset not correctly defined! Set satellite_type either to "Landsat" or "Sentinel-2".')
 
         # Calculate MNDWI, NDVI and NDWI
         collection = classification.calculateIndicators(collection)
@@ -55,7 +70,7 @@ def startWorkflow(dgo_asset: str,
         collection = classification.classifyObjects(collection)
 
         # Metrics calculation
-        metrics = dgo_metrics.calculateDGOsMetrics(collection=collection, dgos=dgo_subset)
+        metrics = dgo_metrics.calculateDGOsMetrics(collection=collection, dgos=dgo_subset, scale = scale)
 
         # Create computation task
         assetName = f'{workflow_id}_{i}'
