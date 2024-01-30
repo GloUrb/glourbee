@@ -248,7 +248,7 @@ def dgoMetrics(collection, scale):
     return mapDGO
 
 
-def calculateDGOsMetrics(collection, dgos):
+def calculateDGOsMetrics(collection, dgos, scale):
     # Ajouter les listes de métriques aux attributs des DGOs
     # Use a lambda function to pass the scale argument to mapDGO
     metrics = dgos.map(lambda dgo: dgoMetrics(collection, scale)(dgo))
