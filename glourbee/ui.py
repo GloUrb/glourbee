@@ -1,20 +1,89 @@
-"""File containing numerous functions used for the Glourbinterface. Some of this functions are just adapted from the 
-functions developped by Samuel Dunesme.
-
-see : https://github.com/EVS-GIS/glourbee
-
 """
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+Functions used by the GloUrbEE-UI.
+
+@authors: Julie Limonet, Samuel Dunesme
+"""
 
 import ee
 import geemap
-import tempfile
 import streamlit as st
 import geopandas as gpd
 import os
 import numpy as np
 
+from glourbee import __version__ as glourbee_version
+
+
+### UI
+
+def addHeader(title: str = "Default title"):
+
+    if 'authenticated' not in st.session_state:
+        st.switch_page('00_🏠_HomePage.py')
+
+    image_path = os.path.join(st.session_state['ui_directory'], 'lib/img/logo.svg')
+    st.image(image_path)
+
+    st.write(f'Current GloUrbEE version: {glourbee_version}')
+
+    st.header(title, divider=True)
+
+    with st.sidebar:
+        if st.session_state["authenticated"]:
+            st.success(f'Authenticated as **{st.session_state["user"]}**', icon="😎")
+        else:
+            st.warning(f'**Unauthenticated**', icon="🥸")
+
+
+def select_dgos(df):
+    """
+    From https://docs.streamlit.io/knowledge-base/using-streamlit/how-to-get-row-selections
+    """
+    df_with_selections = df.copy()
+    df_with_selections.insert(0, "Selected", False)
+
+    # Get dataframe row-selections from user with st.data_editor
+    edited_df = st.data_editor(
+        df_with_selections,
+        hide_index=True,
+        use_container_width=True,
+        column_config={"Selected": st.column_config.CheckboxColumn(required=True),
+                       "river_name": st.column_config.TextColumn('River name'),
+                       "dgo_size": st.column_config.NumberColumn('DGO size', format='%d m'),
+                       "uploader": st.column_config.TextColumn('Uploader'),
+                       "upload_date": st.column_config.DatetimeColumn('Upload date')},
+        column_order=("Selected", "river_name", "dgo_size", "uploader", "upload_date"),
+        disabled=df.columns,
+    )
+
+    # Filter the dataframe using the temporary column, then drop the column
+    selected_rows = edited_df[edited_df.Selected]
+    return selected_rows.drop('Selected', axis=1)
+
+
+def select_metrics(df):
+    """
+    From https://docs.streamlit.io/knowledge-base/using-streamlit/how-to-get-row-selections
+    """
+    df_with_selections = df.copy()
+    df_with_selections.insert(0, "Download", False)
+
+    def highlight_recommended(row):
+        return ['background-color: #ccf5b8']*len(row) if not row['outdated'] and row['state'] == 'COMPLETED' else []
+
+    # Get dataframe row-selections from user with st.data_editor
+    edited_df = st.data_editor(
+        df_with_selections.style.apply(highlight_recommended, axis=1),
+        hide_index=True,
+        use_container_width=True,
+        column_config={"Download": st.column_config.CheckboxColumn(required=True)},
+        column_order=("Download", 'run_date', 'glourbee_version', 'run_by', 'state', 'start_date', 'end_date', 'cloud_filter', 'cloud_masking', 'mosaic_same_day'),
+        disabled=df.columns,
+    )
+
+    # Filter the dataframe using the temporary column, then drop the column
+    selected_rows = edited_df[edited_df.Download]
+    return selected_rows.drop('Download', axis=1)
 
 """-----------------------------------------------------------------------------------------------------------------
 -------------------------------------------------- Authentication --------------------------------------------------

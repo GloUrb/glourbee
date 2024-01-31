@@ -70,7 +70,7 @@ def uploadDGOs(dgo_shapefile_path, simplify_tolerance=15, ee_project_name='ee-gl
         # Uploader l'asset
         assetName = f'{os.path.splitext(os.path.basename(dgo_shapefile_path))[0]}_{uuid.uuid4().hex}'
         assetId = f'projects/{ee_project_name}/assets/dgos/{assetName}'
-        if uploadAsset(dgo_shp, 'DGOs uploaded from glourbee notebook', assetId):
+        if uploadAsset(dgo_shp, f'DGOs {assetName} uploaded from glourbee', assetId):
             # Renvoyer l'asset exporté et son id
             return(assetId, ee.FeatureCollection(assetId))
         else:
@@ -90,7 +90,7 @@ def uploadDGOs(dgo_shapefile_path, simplify_tolerance=15, ee_project_name='ee-gl
             # Uploader l'asset
             assetName = f'{os.path.splitext(os.path.basename(dgo_shapefile_path))[0]}_{uuid.uuid4().hex}'
             assetId = f'projects/{ee_project_name}/assets/dgos/tmp/{assetName}'
-            taskid = uploadAsset(dgo_shp, 'DGOs uploaded from glourbee notebook', assetId, wait=False)
+            taskid = uploadAsset(dgo_shp, f'DGOs {assetName} uploaded from glourbee task {n}-{nsplit}', assetId, wait=False)
             
             if taskid:
                 # Ajouter l'assetId à la liste à fusionner

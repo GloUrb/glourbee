@@ -1,8 +1,9 @@
 from setuptools import setup
+from .glourbee import __version__
 
 setup(
     name='GloUrbEE',
-    version='0.2',
+    version=__version__,
     py_modules=['glourbee.*'],
     install_requires=[
         'click',
@@ -15,7 +16,9 @@ setup(
         'ipython',
         'ipykernel',
         'ipyleaflet==0.16',
-        'streamlit',
-        'streamlit-folium'
+        'streamlit>=1.30.0',
+        'streamlit-folium',
+        'sqlalchemy',
+        'alembic'
     ],
 )
