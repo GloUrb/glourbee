@@ -3,7 +3,7 @@
 # Installation
 
 - Windows
-```bash
+```powershell
 python -m venv env --prompt glourbee
 .\env\Scripts\activate
 python -m pip install -U pip
@@ -21,6 +21,32 @@ python -m pip install -e .
 # Example usage
 
 The `notebook.ipynb` file contains example of how to use the GloUrbEE tool.
+
+# Start the UI
+
+The GloUrbEE-UI allow you to use the main GloUrbEE package workflow with a fancy user-friendly interface.
+The first time you start the UI, you'll had to create the database and run migrations:
+```bash
+sudo apt-get install sqlite3
+
+sqlite3 ui/lib/db/glourbee-ui.db
+sqlite> .quit
+
+alembic upgrade
+```
+
+Then, to start the UI:
+- Windows
+```powershell
+.\env\Scripts\activate
+streamlit run ui/00_🏠_HomePage.py
+```
+
+- Linux
+```bash
+source env/bin/activate
+streamlit run ui/00_🏠_HomePage.py
+```
 
 # Data extracted
 ## Metrics
