@@ -14,8 +14,6 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
 parts/
 sdist/
 var/
@@ -128,9 +126,19 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
+#########################
+# GloUrbEE-specific below
+
+# Earth Engine login key
 earthengine-key.json
+
+# Temp files
 example_data/*_gcs.*
 example_data/*.tmp.csv
 
+# GloUrbEE-UI database
+ui/lib/db/*
+
+# Local user notebooks and data
 *.local.ipynb
 data

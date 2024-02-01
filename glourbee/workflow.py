@@ -3,6 +3,8 @@ import os
 import uuid
 import numpy as np
 import pandas as pd
+from urllib.request import urlretrieve
+from urllib.error import HTTPError
 
 import tempfile
 
@@ -25,11 +27,12 @@ def startWorkflow(dgo_asset: str,
                   cloud_filter: int = 80,
                   cloud_masking: bool = True,
                   mosaic_same_day: bool = True,
-                  split_size: int = 50):
+                  split_size: int = 50,
+                  fid_field= 'DGO_FID'):
     
     dgo_features = ee.FeatureCollection(dgo_asset)
 
-    dgo_fids = dgo_features.aggregate_array('DGO_FID').getInfo()
+    dgo_fids = dgo_features.aggregate_array(fid_field).getInfo()
     n_dgos = dgo_features.size().getInfo()
 
     subsets = np.array_split(dgo_fids, n_dgos/split_size)
@@ -38,7 +41,7 @@ def startWorkflow(dgo_asset: str,
 
     for i, sub in enumerate(subsets):
         i+=1
-        dgo_subset = dgo_features.filter(ee.Filter.inList('DGO_FID', sub.tolist()))
+        dgo_subset = dgo_features.filter(ee.Filter.inList(fid_field, sub.tolist()))
         
         # Get the landsat image collection for your ROI
         collection = data_management.getLandsatCollection(start=ee.Date(start), 
@@ -110,39 +113,16 @@ def getResults(run_id, ee_project_name, output_csv, overwrite=False, remove_tmp=
 
     assets = [f'projects/{ee_project_name}/assets/{uri}' for uri in uris]
     temp_csv_list = [os.path.join(tempdir, f'{os.path.basename(a)}.tmp.csv') for a in assets]
-
-    properties_list = [
-        'DATE',
-        'AC_AREA',
-        'CLOUD_SCORE',
-        'COVERAGE_SCORE',
-        'DATE_ACQUIRED',
-        'DGO_FID',
-        'MEAN_AC_MNDWI',
-        'MEAN_AC_NDVI',
-        'MEAN_MNDWI',
-        'MEAN_NDVI',
-        'MEAN_VEGETATION_MNDWI',
-        'MEAN_VEGETATION_NDVI',
-        'MEAN_WATER_MNDWI',
-        'VEGETATION_AREA',
-        'VEGETATION_PERIMETER',
-        'WATER_AREA',
-        'WATER_PERIMETER']
     
     for assetName, path in zip(assets, temp_csv_list):
         if not os.path.exists(path) or overwrite:
             asset = ee.FeatureCollection(assetName)
-            clean_fc = asset.select(propertySelectors=properties_list,
-                            retainGeometry=False)
-            try:
-                urlretrieve(clean_fc.getDownloadUrl(), path)
-            except HTTPError:
-                # Si c'est impossible de télécharger l'asset nettoyé, télécharger l'asset complet et le nettoyer localement
-                urlretrieve(asset.getDownloadUrl(), path)
-                df = pd.read_csv(path, index_col=None, header=0)
-                df = df[properties_list]
-                df.to_csv(path)
+
+            # Télécharger l'asset complet et le nettoyer localement
+            urlretrieve(asset.getDownloadUrl(), path)
+            df = pd.read_csv(path, index_col=None, header=0)
+            df = df.drop(['system:index', '.geo'], axis=1)
+            df.to_csv(path)
         else:
             continue
 
