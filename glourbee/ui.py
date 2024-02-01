@@ -34,6 +34,8 @@ def addHeader(title: str = "Default title"):
         
         st.write(f'GloUrbEE version: ```{glourbee_version}```')
 
+        st.write('[Report a bug or ask for new feature](https://github.com/EVS-GIS/glourbee/issues)')
+
 
 def select_dgos(df):
     """

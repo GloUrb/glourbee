@@ -19,7 +19,7 @@ uploaded_key = st.file_uploader("Upload key file",
                                 help = 'Here you can upload your json file !', 
                                 accept_multiple_files=False)
 
-if st.button("Authenticate"):
+if st.button("Authenticate with JSON key"):
     if uploaded_key:
         st.session_state['uploaded_key_path'] = uploaded_key
         bytes_data = uploaded_key.getvalue().decode("utf-8")

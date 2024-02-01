@@ -31,7 +31,7 @@ def check_outdated(row):
 assets['outdated'] = assets.apply(check_outdated, axis=1)
 
 if len(assets) >= 1:
-    st.write('Check the already calculated metric datasets for your selected DGOs. The green are recommended ones. Check your task manager to update the tasks state.')
+    st.write('Check the already calculated metric datasets for your selected DGOs. The green are recommended ones, if there is no recommended dataset, we recommend you to calculate a new one. Check your task manager to update the tasks state.')
     
     if not st.session_state['metrics']:
         selection = ui.select_metrics(assets)
@@ -86,6 +86,8 @@ with st.form('calulate_metrics'):
     landsat = col2.toggle('Use Landsat images', value = True)
     sentinel = col2.toggle('Use Sentinel images (coming soon...)', value = True)
 
+    fid_field = st.selectbox('Unique DGO Identifier field', options=st.session_state['dgo_features'].limit(0).getInfo()['columns'].keys())
+
     submit_metrics = st.form_submit_button("Start computation tasks")
 
     if submit_metrics:
@@ -106,7 +108,8 @@ with st.form('calulate_metrics'):
                                             cloud_filter=cloud_filter,
                                             cloud_masking=cloud_masking,
                                             mosaic_same_day=mosaic_same_day,
-                                            split_size=split_size)
+                                            split_size=split_size,
+                                            fid_field=fid_field)
             
             # Mettre à jour la base de données
             with st.session_state['db'].session as session:
