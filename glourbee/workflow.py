@@ -27,11 +27,12 @@ def startWorkflow(dgo_asset: str,
                   cloud_filter: int = 80,
                   cloud_masking: bool = True,
                   mosaic_same_day: bool = True,
-                  split_size: int = 50):
+                  split_size: int = 50,
+                  fid_field= 'DGO_FID'):
     
     dgo_features = ee.FeatureCollection(dgo_asset)
 
-    dgo_fids = dgo_features.aggregate_array('DGO_FID').getInfo()
+    dgo_fids = dgo_features.aggregate_array(fid_field).getInfo()
     n_dgos = dgo_features.size().getInfo()
 
     subsets = np.array_split(dgo_fids, n_dgos/split_size)
@@ -40,7 +41,7 @@ def startWorkflow(dgo_asset: str,
 
     for i, sub in enumerate(subsets):
         i+=1
-        dgo_subset = dgo_features.filter(ee.Filter.inList('DGO_FID', sub.tolist()))
+        dgo_subset = dgo_features.filter(ee.Filter.inList(fid_field, sub.tolist()))
         
         # Get the landsat image collection for your ROI
         collection = data_management.getLandsatCollection(start=ee.Date(start), 
