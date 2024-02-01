@@ -24,8 +24,6 @@ def addHeader(title: str = "Default title"):
     image_path = os.path.join(st.session_state['ui_directory'], 'lib/img/logo.svg')
     st.image(image_path)
 
-    st.write(f'Current GloUrbEE version: {glourbee_version}')
-
     st.header(title, divider=True)
 
     with st.sidebar:
@@ -33,6 +31,8 @@ def addHeader(title: str = "Default title"):
             st.success(f'Authenticated as **{st.session_state["user"]}**', icon="😎")
         else:
             st.warning(f'**Unauthenticated**', icon="🥸")
+        
+        st.write(f'GloUrbEE version: ```{glourbee_version}```')
 
 
 def select_dgos(df):
