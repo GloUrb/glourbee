@@ -82,6 +82,15 @@ streamlit run ui/00_🏠_HomePage.py
 | recurrence_p* | The frequency with which water returns from year to year (JRC Global Surface Water Mapping) |
 | max_extent | Surface where water has ever been detected (JRC Global Surface Water Mapping) |
 
+# Credits
+Many thanks to:
+- [Barbara Belletti](https://github.com/bbelletti) for the original concept and ideas
+- Khalid for the first Python version
+- [Louis Rey](https://github.com/LouisRey74) for huge testing
+- [Julie Limonet](https://github.com/Julielmnt) for the UI skeleton
+- [Leo Helling](https://github.com/jlhelling) for the Sentinel-2 integration
+- [Samuel Dunesme](https://github.com/sdunesme)
+
 # TODO
 - Changer le filtre modal par un tamisage
 - Ajouter *transition* du JRC Surface Water

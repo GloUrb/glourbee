@@ -1,8 +1,8 @@
 from setuptools import setup
-from .glourbee import __version__
+from glourbee import __version__
 
 setup(
-    name='GloUrbEE',
+    name='glourbee',
     version=__version__,
     py_modules=['glourbee.*'],
     install_requires=[
