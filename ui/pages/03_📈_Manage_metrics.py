@@ -6,15 +6,18 @@ import os
 from packaging import version
 from sqlalchemy.sql import text
 
+from glourbee import ui
+
+ui.addHeader('Manage metrics')
+if not st.session_state['authenticated']: 
+    st.switch_page('pages/01_🕶️_Authentication.py')
+if 'dgo_table_id' not in st.session_state or not st.session_state['dgo_table_id']: 
+    st.switch_page('pages/02_🌍_Manage_DGOs.py')
+
 from glourbee import (
-    ui,
     workflow,
     __version__ as glourbee_version,
 )
-
-import tempfile
-
-ui.addHeader('Manage metrics')
 
 if 'metrics' not in st.session_state:
     st.session_state['metrics'] = None
@@ -160,7 +163,7 @@ st.markdown('''
 st.title('Start a new indicators dataset computation')
 
 if st.button('Start computation task (no parameters)'):
-    local_csv = os.path.join(st.session_state['tempdir'], 'indicators.csv')
+    local_csv = os.path.join(st.session_state['tempdir'].name, 'indicators.csv')
 
     with st.spinner('Computing indicators...'):
         workflow.indicatorsWorkflow(dgos_asset=st.session_state['dgo_features'], 

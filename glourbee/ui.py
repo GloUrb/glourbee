@@ -490,11 +490,3 @@ def workflowState(run_id):
     st.write(f"{failed} tasks failed.")
 
     return tasks
-
-
-def run():
-    pass
-
-
-if __name__ == "__main__":
-    run()

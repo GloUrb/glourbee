@@ -95,3 +95,6 @@ Many thanks to:
 - Changer le filtre modal par un tamisage
 - Ajouter *transition* du JRC Surface Water
 - Gérer les polygones de grande taille au niveau des métriques (indicateurs OK)
+- Ajouter description DGO dans la sqlite
+- Ajouter expressions définitions des masques comme paramètre avancé
+- Renommer DGO en "extraction zones"

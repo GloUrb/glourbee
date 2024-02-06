@@ -7,6 +7,8 @@ import ee
 import os
 import geemap.foliumap as geemap
 
+from ee.ee_exception import EEException
+
 from sqlalchemy.sql import text
 from glourbee import (
     ui,
@@ -129,11 +131,23 @@ else:
 
     if len(selection) == 1:
 
-        ee.data.deleteAsset(selection['asset_id'].iloc[0])
+        try:
+            ee.data.deleteAsset(selection['asset_id'].iloc[0])
 
-        with st.session_state['db'].session as session:
-            session.execute(text("DELETE FROM glourbassets WHERE asset_id = :i;"),
-                            {'i': selection['asset_id'].iloc[0]})
-            session.commit()
+            with st.session_state['db'].session as session:
+                session.execute(text("DELETE FROM glourbassets WHERE asset_id = :i;"),
+                                {'i': selection['asset_id'].iloc[0]})
+                session.commit()
             
-        st.rerun()
+            st.rerun()
+
+        except EEException as e:
+            st.write('The asset seems to be already deleted from GEE:')
+            st.write(e)
+            if st.button('Delete from database'):
+                with st.session_state['db'].session as session:
+                    session.execute(text("DELETE FROM glourbassets WHERE asset_id = :i;"),
+                                    {'i': selection['asset_id'].iloc[0]})
+                    session.commit()
+                
+                st.rerun()
