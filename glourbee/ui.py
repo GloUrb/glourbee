@@ -37,7 +37,7 @@ def addHeader(title: str = "Default title"):
         st.write('[Report a bug or ask for new feature](https://github.com/EVS-GIS/glourbee/issues)')
 
 
-def select_dgos(df):
+def select_dgos(df, key):
     """
     From https://docs.streamlit.io/knowledge-base/using-streamlit/how-to-get-row-selections
     """
@@ -47,14 +47,16 @@ def select_dgos(df):
     # Get dataframe row-selections from user with st.data_editor
     edited_df = st.data_editor(
         df_with_selections,
+        key=key,
         hide_index=True,
         use_container_width=True,
         column_config={"Selected": st.column_config.CheckboxColumn(required=True),
-                       "river_name": st.column_config.TextColumn('River name'),
-                       "dgo_size": st.column_config.NumberColumn('DGO size', format='%d m'),
+                       "river_name": st.column_config.TextColumn('Extraction zones name'),
+                       "description": st.column_config.TextColumn('Extraction zones description'),
+                       "dgo_size": st.column_config.NumberColumn('DGO size if concerned', format='%d m'),
                        "uploader": st.column_config.TextColumn('Uploader'),
                        "upload_date": st.column_config.DatetimeColumn('Upload date')},
-        column_order=("Selected", "river_name", "dgo_size", "uploader", "upload_date"),
+        column_order=("Selected", "river_name", "description", "dgo_size", "uploader", "upload_date"),
         disabled=df.columns,
     )
 

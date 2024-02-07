@@ -11,8 +11,8 @@ from glourbee import ui
 ui.addHeader('Manage metrics')
 if not st.session_state['authenticated']: 
     st.switch_page('pages/01_🕶️_Authentication.py')
-if 'dgo_table_id' not in st.session_state or not st.session_state['dgo_table_id']: 
-    st.switch_page('pages/02_🌍_Manage_DGOs.py')
+if 'extraction_zones' not in st.session_state or not st.session_state['extraction_zones']['tableId']: 
+    st.switch_page('pages/02_🌍_Manage_extraction_zones.py')
 
 from glourbee import (
     workflow,
@@ -26,16 +26,16 @@ st.title('Select a metrics dataset')
 
 assets = st.session_state['db'].query('select * from glourbmetrics where dgo_asset = :dgo_id', 
                                         ttl=0, 
-                                        params={'dgo_id': int(st.session_state['dgo_table_id'])})
-
-def check_outdated(row):
-    return version.parse(row['glourbee_version']) < version.parse(str(glourbee_version))
-
-assets['outdated'] = assets.apply(check_outdated, axis=1)
+                                        params={'dgo_id': int(st.session_state['extraction_zones']['tableId'])})
 
 if len(assets) >= 1:
-    st.write('Check the already calculated metric datasets for your selected DGOs. The green are recommended ones, if there is no recommended dataset, we recommend you to calculate a new one. Check your task manager to update the tasks state.')
+    st.write('Check the already calculated metric datasets for your selected extraction zones. The green are recommended ones, if there is no recommended dataset, we recommend you to calculate a new one. Check your task manager to update the tasks state.')
     
+    def check_outdated(row):
+        return version.parse(row['glourbee_version']) < version.parse(str(glourbee_version))
+
+    assets['outdated'] = assets.apply(check_outdated, axis=1)
+
     if not st.session_state['metrics']:
         selection = ui.select_metrics(assets)
 
@@ -64,7 +64,7 @@ if len(assets) >= 1:
                 st.download_button('Download metrics CSV', f, 'text/csv', help="Download the metrics dataset to your local computer")
 
 else:
-    st.warning('No metrics already calculated for this DGOs asset')
+    st.warning('No metrics already calculated for this extraction zones asset')
 
 st.title('Start a new metrics dataset computation')
 
@@ -89,7 +89,7 @@ with st.form('calulate_metrics'):
     landsat = col2.toggle('Use Landsat images', value = True)
     sentinel = col2.toggle('Use Sentinel images (coming soon...)', value = True)
 
-    fid_field = st.selectbox('Unique DGO Identifier field', options=st.session_state['dgo_features'].limit(0).getInfo()['columns'].keys())
+    fid_field = st.selectbox('Unique Identifier field', options=st.session_state['extraction_zones']['features'].limit(0).getInfo()['columns'].keys())
 
     submit_metrics = st.form_submit_button("Start computation tasks")
 
@@ -98,14 +98,14 @@ with st.form('calulate_metrics'):
             # Récupérer la taille des DGOs
             dgo_size = st.session_state['db'].query('SELECT dgo_size FROM glourbassets WHERE id = :i',
                                                     ttl=0, 
-                                                    params={'i': int(st.session_state['dgo_table_id'])})
+                                                    params={'i': int(st.session_state['extraction_zones']['tableId'])})
             
             # Faire des paquets de 100km de DGOs
             split_size = 100000 / int(dgo_size['dgo_size'])
             
             # Lancer le workflow
             run_id = workflow.startWorkflow(ee_project_name='ee-glourb',
-                                            dgo_asset=st.session_state['dgo_assetId'],
+                                            dgo_asset=st.session_state['extraction_zones']['assetId'],
                                             start=start,
                                             end=stop,
                                             cloud_filter=cloud_filter,
@@ -119,7 +119,7 @@ with st.form('calulate_metrics'):
                 session.execute(text('INSERT INTO glourbmetrics (dgo_asset, run_by, glourbee_version, run_id, state, start_date, end_date, cloud_filter, cloud_masking, mosaic_same_day) \
                                      VALUES (:dgo, :by, :vers, :run, :s, :start, :end, :filt, :mask, :mosaic);'),
                                 {
-                                    'dgo': int(st.session_state['dgo_table_id']),
+                                    'dgo': int(st.session_state['extraction_zones']['tableId']),
                                     'by': st.session_state['user'],
                                     'vers': glourbee_version,
                                     'run': run_id,
@@ -141,22 +141,22 @@ st.markdown('''
 | metric name | description |   
 |---|---|
 | AC_AREA | Active Channel area (pixels) |
-| CLOUD_SCORE | Percent of the DGO covered by clouds (%) |
-| COVERAGE_SCORE | Percent of the DGO covered by the Landsat image (%) |
+| CLOUD_SCORE | Percent of the extraction zone covered by clouds (%) |
+| COVERAGE_SCORE | Percent of the extraction zone covered by the Landsat image (%) |
 | MEAN_AC_MNDWI | Mean MNDWI in the active channel surface |
 | MEAN_AC_NDVI | Mean NDVI in the active channel surface |
-| MEAN_MNDWI | Mean MNDWI of the full DGO |
-| MEAN_NDVI| Mean NDVI of the full DGO |
+| MEAN_MNDWI | Mean MNDWI of the full extraction zone |
+| MEAN_NDVI| Mean NDVI of the full extraction zone |
 | MEAN_VEGETATION_MNDWI | Mean MNDWI in the vegetation surface |
 | MEAN_VEGETATION_NDVI | Mean NDVI in the vegetation surface |
 | MEAN_WATER_MNDWI | Mean MNDWI in the water surface |
 | VEGETATION_AREA | Vegetation area (pixels) |
-| VEGETATION_POLYGONS | Number of vegetation patches inside the DGO |
-| VEGETATION_POLYGONS_p* | Percentiles of the vegetation patches size (in pixels) inside the DGO |
+| VEGETATION_POLYGONS | Number of vegetation patches inside the extraction zone |
+| VEGETATION_POLYGONS_p* | Percentiles of the vegetation patches size (in pixels) inside the extraction zone |
 | VEGETATION_PERIMETER | Vegetation surface perimeter (projection unit) |
 | WATER_AREA | Water area (pixels) |
-| WATER_POLYGONS | Number of water patches inside the DGO |
-| WATER_POLYGONS_p* | Percentiles of the water patches size (in pixels) inside the DGO |
+| WATER_POLYGONS | Number of water patches inside the extraction zone |
+| WATER_POLYGONS_p* | Percentiles of the water patches size (in pixels) inside the extraction zone |
 | WATER_PERIMETER | Water surface perimeter (projection unit) |
 ''')
 
@@ -166,7 +166,7 @@ if st.button('Start computation task (no parameters)'):
     local_csv = os.path.join(st.session_state['tempdir'].name, 'indicators.csv')
 
     with st.spinner('Computing indicators...'):
-        workflow.indicatorsWorkflow(dgos_asset=st.session_state['dgo_features'], 
+        workflow.indicatorsWorkflow(dgos_asset=st.session_state['extraction_zones']['features'], 
                                     output_csv=local_csv)
     
     with open(local_csv) as f:

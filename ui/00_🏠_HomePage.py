@@ -17,10 +17,9 @@ if 'tempdir' not in st.session_state:
     st.session_state['tempdir'] = tempfile.TemporaryDirectory()
 if "authenticated" not in st.session_state:
     st.session_state['authenticated'] = False
-if "dgo_features" not in st.session_state:
-    st.session_state['dgo_features'] = None
-if "dgo_assetId" not in st.session_state:
-    st.session_state['dgo_assetId'] = None
+if 'extraction_zones' not in st.session_state:
+    st.session_state['extraction_zones'] = {'tableId': None, 'assetId': None, 'features': None}
+
 
 st.session_state['ui_directory'] = Path(__file__).parent
 ui_directory = st.session_state['ui_directory']
@@ -37,8 +36,8 @@ st.title('Authentication page')
 st.write('The Authentication page allow you to authenticate to Google Earth Engine (GEE). Most of the function need the connection to GEE to be established in order to work. For the moment, only service account JSON key is supported.')
 #st.image(os.path.join(ui_directory, 'lib/img/authentication.svg'),  use_column_width=True, width=500)
 
-st.title('Manage DGOs page')
-st.write('The Manage DGOs page allows to select DGOs, upload new ones or delete DGOs previously uploaded on GEE.')
+st.title('Manage extraction zones page')
+st.write('The *Manage extraction zones* page allows to select extraction zones, upload new ones or delete extraction zones previously uploaded on GEE.')
 #st.image(os.path.join(ui_directory, 'lib/img/dgo1.svg'),  use_column_width=True, width=500)
 #st.subheader('Use an already loaded dgos')   
 #st.write('If you choose to use an asset, you\'ll have to enter the number of the one you want from the list above. The dgo loads and is displayed in the map.')
@@ -62,7 +61,7 @@ st.write('Select a metrics dataset, download it locally, or start a new metrics 
 st.title('Visualize layers page')
 st.info('Coming soon', icon='🙃')
 st.markdown('''
-This page will allow you to visualize the metrics calulated and the corresponding layers for a few set of DGOs:
+This page will allow you to visualize the metrics calculated and the corresponding layers for a few set of extraction zones:
 - WATER CHANNEL
 - ACTIVE CHANNEL
 - VEGETATION

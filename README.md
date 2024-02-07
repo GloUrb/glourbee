@@ -25,17 +25,9 @@ The `notebook.ipynb` file contains example of how to use the GloUrbEE tool.
 # Start the UI
 
 The GloUrbEE-UI allow you to use the main GloUrbEE package workflow with a fancy user-friendly interface.
-The first time you start the UI, you'll had to create the database and run migrations:
-```bash
-sudo apt-get install sqlite3
 
-sqlite3 ui/lib/db/glourbee-ui.db
-sqlite> .quit
+## With streamlit 
 
-alembic upgrade
-```
-
-Then, to start the UI:
 - Windows
 ```powershell
 .\env\Scripts\activate
@@ -47,6 +39,14 @@ streamlit run ui/00_🏠_HomePage.py
 source env/bin/activate
 streamlit run ui/00_🏠_HomePage.py
 ```
+
+## With docker
+
+```bash
+docker run -v /data/glourbee-ui.db:/app/ui/li/db/glourbee-ui.db ghcr.io/evs-gis/glourbee-ui:latest 
+```
+
+If you want the database to be persistent, you can mount /app/ui/lib/db/glourbee-ui.db in a docker volume.
 
 # Data extracted
 ## Metrics
@@ -90,11 +90,3 @@ Many thanks to:
 - [Julie Limonet](https://github.com/Julielmnt) for the UI skeleton
 - [Leo Helling](https://github.com/jlhelling) for the Sentinel-2 integration
 - [Samuel Dunesme](https://github.com/sdunesme)
-
-# TODO
-- Changer le filtre modal par un tamisage
-- Ajouter *transition* du JRC Surface Water
-- Gérer les polygones de grande taille au niveau des métriques (indicateurs OK)
-- Ajouter description DGO dans la sqlite
-- Ajouter expressions définitions des masques comme paramètre avancé
-- Renommer DGO en "extraction zones"
