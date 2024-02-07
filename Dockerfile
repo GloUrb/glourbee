@@ -1,5 +1,8 @@
 FROM python:3.10-slim
 LABEL org.opencontainers.image.authors="samuel.dunesme@ens-lyon.fr"
+LABEL org.opencontainers.image.source="https://github.com/EVS-GIS/glourbee"
+LABEL org.opencontainers.image.description="Use GEE to extract metrics concerning river corridors. This project is part of the GloUrb ANR."
+LABEL org.opencontainers.image.licenses="GPL-3.0-only"
 
 WORKDIR /app
 
@@ -7,7 +10,7 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     curl \
     software-properties-common \
-    git \
+#    git \
     && rm -rf /var/lib/apt/lists/*
 
 # RUN git clone https://github.com/evs-gis/glourbee.git .
@@ -15,7 +18,8 @@ COPY ./ui ./ui
 COPY ./glourbee ./glourbee
 COPY ./setup.py ./setup.py
 
-RUN pip3 install -e .
+RUN pip3 install -e . \
+    && pip3 cache purge
 
 EXPOSE 8501
 
