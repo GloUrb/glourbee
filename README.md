@@ -55,6 +55,7 @@ If you want the database to be persistent, you can mount /app/ui/lib/db/glourbee
 | AC_AREA | Active Channel area (pixels) |
 | CLOUD_SCORE | Percent of the DGO covered by clouds (%) |
 | COVERAGE_SCORE | Percent of the DGO covered by the Landsat image (%) |
+| SCALE | Size of a pixel on the selected imagery dataset (meters) |
 | MEAN_AC_MNDWI | Mean MNDWI in the active channel surface |
 | MEAN_AC_NDVI | Mean NDVI in the active channel surface |
 | ~~MEAN_DRY_MNDWI~~ | ~~Mean MNDWI in the surface which is not water~~  |

@@ -225,6 +225,7 @@ def dgoMetrics(collection, scale=30):
                                      'DATE': ee.Date(image.get('system:time_start')).format("YYYY-MM-dd"),
                                      'CLOUD_SCORE': cloud_score, 
                                      'COVERAGE_SCORE': coverage_score,
+                                     'SCALE': ee.Number(scale),
                                     }).combine(water_metrics).combine(vegetation_metrics).combine(ac_metrics))
             
             # Filtrer si le DGO est 100% couvert de nuages
