@@ -29,7 +29,7 @@ assets = st.session_state['db'].query('select * from glourbmetrics where dgo_ass
                                         params={'dgo_id': int(st.session_state['extraction_zones']['tableId'])})
 
 if len(assets) >= 1:
-    st.write('Check the already calculated metric datasets for your selected extraction zones. The green are recommended ones, if there is no recommended dataset, we recommend you to calculate a new one. Check your task manager to update the tasks state.')
+    st.write('Check the already calculated metric datasets for your selected extraction zones. Check your task manager to update the tasks state.')
     
     def check_outdated(row):
         return version.parse(row['glourbee_version']) < version.parse(str(glourbee_version))
@@ -86,10 +86,12 @@ with st.form('calulate_metrics'):
     cloud_masking = col1.toggle('Cloud masking', value = True)
     mosaic_same_day = col1.toggle('Mosaic same day', value = True)
 
-    landsat = col2.toggle('Use Landsat images', value = True)
-    sentinel = col2.toggle('Use Sentinel images (coming soon...)', value = True)
+    satellite_type = col2.radio('Satellite imagery dataset to use', 
+                                options=['Landsat', 'Sentinel-2'], 
+                                captions = ['Data available since 1982-08-22', 'Data available since 2017-03-28'])
 
-    fid_field = st.selectbox('Unique Identifier field', options=st.session_state['extraction_zones']['features'].limit(0).getInfo()['columns'].keys())
+    fid_field = st.selectbox('Unique Identifier field', 
+                             options=st.session_state['extraction_zones']['features'].limit(0).getInfo()['columns'].keys())
 
     submit_metrics = st.form_submit_button("Start computation tasks")
 
@@ -101,11 +103,13 @@ with st.form('calulate_metrics'):
                                                     params={'i': int(st.session_state['extraction_zones']['tableId'])})
             
             # Faire des paquets de 100km de DGOs
-            split_size = 100000 / int(dgo_size['dgo_size'])
-            
+            # split_size = 100000 / int(dgo_size['dgo_size'])
+            split_size = 1
+
             # Lancer le workflow
             run_id = workflow.startWorkflow(ee_project_name='ee-glourb',
                                             dgo_asset=st.session_state['extraction_zones']['assetId'],
+                                            satellite_type=satellite_type,
                                             start=start,
                                             end=stop,
                                             cloud_filter=cloud_filter,
@@ -116,8 +120,8 @@ with st.form('calulate_metrics'):
             
             # Mettre à jour la base de données
             with st.session_state['db'].session as session:
-                session.execute(text('INSERT INTO glourbmetrics (dgo_asset, run_by, glourbee_version, run_id, state, start_date, end_date, cloud_filter, cloud_masking, mosaic_same_day) \
-                                     VALUES (:dgo, :by, :vers, :run, :s, :start, :end, :filt, :mask, :mosaic);'),
+                session.execute(text('INSERT INTO glourbmetrics (dgo_asset, run_by, glourbee_version, run_id, state, start_date, end_date, cloud_filter, cloud_masking, mosaic_same_day, satellite_type) \
+                                     VALUES (:dgo, :by, :vers, :run, :s, :start, :end, :filt, :mask, :mosaic, :sat);'),
                                 {
                                     'dgo': int(st.session_state['extraction_zones']['tableId']),
                                     'by': st.session_state['user'],
@@ -128,7 +132,8 @@ with st.form('calulate_metrics'):
                                     'end': stop,
                                     'filt': cloud_filter,
                                     'mask': cloud_masking,
-                                    'mosaic':mosaic_same_day 
+                                    'mosaic':mosaic_same_day,
+                                    'sat': satellite_type
                                })
                 session.commit()
 
@@ -143,6 +148,7 @@ st.markdown('''
 | AC_AREA | Active Channel area (pixels) |
 | CLOUD_SCORE | Percent of the extraction zone covered by clouds (%) |
 | COVERAGE_SCORE | Percent of the extraction zone covered by the Landsat image (%) |
+| SCALE | Size of a pixel on the selected imagery dataset (meters) |
 | MEAN_AC_MNDWI | Mean MNDWI in the active channel surface |
 | MEAN_AC_NDVI | Mean NDVI in the active channel surface |
 | MEAN_MNDWI | Mean MNDWI of the full extraction zone |

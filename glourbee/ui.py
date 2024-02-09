@@ -72,16 +72,13 @@ def select_metrics(df):
     df_with_selections = df.copy()
     df_with_selections.insert(0, "Download", False)
 
-    def highlight_recommended(row):
-        return ['background-color: #ccf5b8']*len(row) if not row['outdated'] and row['state'] == 'COMPLETED' else []
-
     # Get dataframe row-selections from user with st.data_editor
-    edited_df = st.data_editor(
-        df_with_selections.style.apply(highlight_recommended, axis=1),
+    edited_df = st.data_editor(df_with_selections,
         hide_index=True,
         use_container_width=True,
-        column_config={"Download": st.column_config.CheckboxColumn(required=True)},
-        column_order=("Download", 'run_date', 'glourbee_version', 'run_by', 'state', 'start_date', 'end_date', 'cloud_filter', 'cloud_masking', 'mosaic_same_day'),
+        column_config={"Download": st.column_config.CheckboxColumn(required=True),
+                       "outdated": st.column_config.TextColumn('Outdated dataset')},
+        column_order=("Download", 'outdated', 'satellite_type', 'run_date', 'glourbee_version', 'run_by', 'state', 'start_date', 'end_date', 'cloud_filter', 'cloud_masking', 'mosaic_same_day'),
         disabled=df.columns,
     )
 
