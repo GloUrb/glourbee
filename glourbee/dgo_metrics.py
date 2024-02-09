@@ -203,13 +203,13 @@ def calculateACMetrics(image, dgo, scale, simplify_tolerance=1.5):
     return results
 
 
-def dgoMetrics(collection, scale):
+def dgoMetrics(collection, scale=30):
     def mapDGO(dgo):
         # Filtrer la collection d'images sur l'emprise du DGO traité
         dgo_images_collection = collection.filterBounds(dgo.geometry())
 
         # Définir une fonction qui ajoute les métriques d'une image à la liste des métriques du DGO
-        def addMetrics(image, metrics_list, scale):
+        def addMetrics(image, metrics_list):
             # Récupérer la Feature du DGO qui est stocké dans le premier élément de la liste
             dgo = ee.Feature(ee.List(metrics_list).get(0))
             
@@ -237,8 +237,7 @@ def dgoMetrics(collection, scale):
         first = ee.List([dgo])
 
         # Ajouter les métriques calculées sur chaque image à la liste
-        # Using a lambda function to pass the scale parameter
-        metrics = dgo_images_collection.iterate(lambda image, list: addMetrics(ee.Image(image), list, scale), first)
+        metrics = dgo_images_collection.iterate(addMetrics, first)
 
         # Supprimer le DGO traité de la liste pour alléger le résultat
         metrics = ee.List(metrics).remove(dgo)
@@ -248,10 +247,9 @@ def dgoMetrics(collection, scale):
     return mapDGO
 
 
-def calculateDGOsMetrics(collection, dgos, scale):
+def calculateDGOsMetrics(collection, dgos, scale=30):
     # Ajouter les listes de métriques aux attributs des DGOs
-    # Use a lambda function to pass the scale argument to mapDGO
-    metrics = dgos.map(lambda dgo: dgoMetrics(collection, scale)(dgo))
+    metrics = dgos.map(dgoMetrics(collection, scale))
 
     # Dé-empiler les métriques stockées dans un attribut de la FeatureCollection
     unnested = ee.FeatureCollection(metrics.aggregate_array('metrics').flatten())
