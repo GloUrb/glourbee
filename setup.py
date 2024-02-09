@@ -1,8 +1,9 @@
 from setuptools import setup
+from glourbee import __version__
 
 setup(
-    name='GloUrbEE',
-    version='0.2',
+    name='glourbee',
+    version=__version__,
     py_modules=['glourbee.*'],
     install_requires=[
         'click',
@@ -12,8 +13,12 @@ setup(
         'pandas',
         'geemap',
         'geetools',
-        'ipython',
-        'ipykernel',
-        'ipyleaflet==0.16'
+        # 'ipython',
+        # 'ipykernel',
+        # 'ipyleaflet==0.16',
+        'streamlit>=1.30.0',
+        'streamlit-folium',
+        'sqlalchemy',
+        'alembic'
     ],
 )

@@ -1,0 +1,15 @@
+[theme]
+base="light"
+primaryColor="#2c7125"
+secondaryBackgroundColor="#cbeac7"
+
+[logger]
+level = 'info'
+
+[client]
+showErrorDetails = true # Set to false in production
+toolbarMode = "auto"
+
+[server]
+cookieSecret = "dontforgettochangeit"
+maxUploadSize = 50

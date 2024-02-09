@@ -3,7 +3,7 @@
 # Installation
 
 - Windows
-```bash
+```powershell
 python -m venv env --prompt glourbee
 .\env\Scripts\activate
 python -m pip install -U pip
@@ -21,6 +21,32 @@ python -m pip install -e .
 # Example usage
 
 The `notebook.ipynb` file contains example of how to use the GloUrbEE tool.
+
+# Start the UI
+
+The GloUrbEE-UI allow you to use the main GloUrbEE package workflow with a fancy user-friendly interface.
+
+## With streamlit 
+
+- Windows
+```powershell
+.\env\Scripts\activate
+streamlit run ui/00_🏠_HomePage.py
+```
+
+- Linux
+```bash
+source env/bin/activate
+streamlit run ui/00_🏠_HomePage.py
+```
+
+## With docker
+
+```bash
+docker run -v /data/glourbee-ui.db:/app/ui/li/db/glourbee-ui.db ghcr.io/evs-gis/glourbee-ui:latest 
+```
+
+If you want the database to be persistent, you can mount /app/ui/lib/db/glourbee-ui.db in a docker volume.
 
 # Data extracted
 ## Metrics
@@ -56,8 +82,11 @@ The `notebook.ipynb` file contains example of how to use the GloUrbEE tool.
 | recurrence_p* | The frequency with which water returns from year to year (JRC Global Surface Water Mapping) |
 | max_extent | Surface where water has ever been detected (JRC Global Surface Water Mapping) |
 
-# TODO
-- Changer le filtre modal par un tamisage
-- Ajouter *transition* du JRC Surface Water
-- Récupérer tous les champs du shapefile en entrée pour les métriques (indicateurs OK)
-- Gérer les polygones de grande taille au niveau des métriques (indicateurs OK)
+# Credits
+Many thanks to:
+- [Barbara Belletti](https://github.com/bbelletti) for the original concept and ideas
+- Khalid for the first Python version
+- [Louis Rey](https://github.com/LouisRey74) for huge testing
+- [Julie Limonet](https://github.com/Julielmnt) for the UI skeleton
+- [Leo Helling](https://github.com/jlhelling) for the Sentinel-2 integration
+- [Samuel Dunesme](https://github.com/sdunesme)
