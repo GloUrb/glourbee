@@ -91,7 +91,7 @@ def startWorkflow(dgo_asset: str,
         collection = classification.calculateIndicators(collection)
 
         # Classify the objects using the indicators
-        collection = classification.classifyObjects(collection)
+        collection = classification.classifyObjects(collection, satellite_type)
 
         # Metrics calculation
         metrics = dgo_metrics.calculateDGOsMetrics(collection=collection, dgos=dgo_subset, scale=scale)

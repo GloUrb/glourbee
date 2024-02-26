@@ -50,52 +50,49 @@ def getLandsatCollection(start=ee.Date('1980-01-01'), end=ee.Date('2100-01-01'),
     return landsat_collection
 
 
-def mask_s2_clouds(image):
-      """Masks clouds in a Sentinel-2 image using the QA band.
-      Args:     image (ee.Image): A Sentinel-2 image.
-      Returns:  ee.Image: A cloud-masked Sentinel-2 image.
-      """
-      qa = image.select('qa_pixel')
-      # Bits 10 and 11 are clouds and cirrus, respectively.
-      cloud_bit_mask = (1 << 10)
-      cirrus_bit_mask = (1 << 11)
-      
-      # Both flags should be set to zero, indicating clear conditions.
-      mask = (qa.bitwiseAnd(cloud_bit_mask).eq(0).And(qa.bitwiseAnd(cirrus_bit_mask).eq(0))).rename('CLOUDS')
+def scale_and_mask_s2_clouds(image):
+    """
+    Masks clouds in a Sentinel-2 image based on a hypothetical cloud score band and scales other bands according to the Sentinel-2 scale of 0.00001
+    Args:
+        image (ee.Image): A Sentinel-2 image with a 'cs' band from the cloudscore+ product
+    Returns:
+        ee.Image: The input image with an added 'CLOUDS' band (1 for clouds, 0 for no clouds)
+    """
+    # Threshold the cloudscore+ band 
+    clouds = image.select('cs').gt(0.65).rename('CLOUDS')
 
-      # Scale the original bands of the image.
-      scaled_image = image.divide(10000)
+    # Scale the original bands of the image.
+    scaled_image = image.select(['blue', 'green', 'red', 'nir', 'swir1', 'swir2']).divide(10000)
 
-      # Add the cloud mask as an additional band without scaling.
-      result_image = scaled_image.addBands(mask)
+    # Add the cloud mask as an additional band without scaling.
+    result_image = scaled_image.addBands(clouds)
 
-      # Copy properties from the original image to the result image.
-      result_image = result_image.copyProperties(image, image.propertyNames())
+    # Copy properties from the original image to the result image.
+    result_image = result_image.copyProperties(image, image.propertyNames())
 
-      return result_image
+    return result_image
 
 
 def getSentinelCollection(start=ee.Date('2017-03-28'), end=ee.Date('2100-01-01'), cloud_masking=True, cloud_filter=None, roi=None, mosaic_same_day=False):  
     
     # Définition des noms de bandes 
-    bnd_names = ['blue', 'green', 'red', 'nir', 'swir1', 'swir2', 'qa_pixel']
-    
-    # Récupération des collections sentinel
-    sentinel_collection = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED').select(['B2', 'B3', 'B4', 'B8','B11','B12','QA60'], bnd_names).filterDate(start, end)
-                         
-    # Filtrage de la région d'intérêt
-    if roi:
-        sentinel_collection = sentinel_collection.filterBounds(roi)
+    bnd_names = ['blue', 'green', 'red', 'nir', 'swir1', 'swir2']
 
-    # Suppression des images avec trop de nuages
+    # Cloud Score+ image collection
+    csPlus = ee.ImageCollection('GOOGLE/CLOUD_SCORE_PLUS/V1/S2_HARMONIZED').filterDate(start, end).filterBounds(roi)
+
+    # create collection, link with cloudscore+ collection
+    sentinel_collection = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED').select(['B2', 'B3', 'B4', 'B8','B11','B12'], bnd_names).filterDate(start, end).filterBounds(roi).linkCollection(csPlus, ["cs"])
+    
+    # Delete images with too much cloud extent (not recommended, use instead CloudScore+ option to efficiently delete clouds inside roi!)
     if cloud_filter:
         sentinel_collection = sentinel_collection.filter(ee.Filter.lte('CLOUDY_PIXEL_PERCENTAGE', cloud_filter))
         
-    # Masquage des nuages restants
+    # Cloud-masking algorithm
     if cloud_masking:
-        sentinel_collection = sentinel_collection.map(mask_s2_clouds).select('blue', 'green', 'red', 'nir','swir1','swir2','CLOUDS')
+        sentinel_collection = sentinel_collection.map(scale_and_mask_s2_clouds).select('blue', 'green', 'red', 'nir','swir1','swir2','CLOUDS')
 
-    # Mosaiquage par jour de prise de vue pour réduire la taille de la collection
+    # Mosaic images from same day to reduce collection size and obtain one mosaiced image per date
     if mosaic_same_day:
         sentinel_collection = tools.imagecollection.mosaicSameDay(sentinel_collection)
     

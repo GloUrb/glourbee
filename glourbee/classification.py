@@ -37,9 +37,15 @@ def calculateIndicators(collection):
 ######
 ## Thresholds to classify objects
 
-def extractWater(image):
+def extractWater(image, satellite_type):
+    
     # Seuillage du raster
-    output_img = image.expression('MNDWI >  0.0', {'MNDWI': image.select('MNDWI')}).rename('WATER')
+    if satellite_type == 'Landsat':
+        output_img = image.expression('MNDWI >  0.0', {'MNDWI': image.select('MNDWI')}).rename('WATER')
+
+    elif satellite_type == 'Sentinel-2':
+        output_img = image.expression('NDWI >  -0.1', {'NDWI': image.select('NDWI')}).rename('WATER')
+
     
     # Filtre modal pour retirer les pixels isolés
     output_img = output_img.focalMode(3)
@@ -78,10 +84,17 @@ def extractVegetation(image):
     return image.addBands(output_img)
 
 
-def extractActiveChannel(image):
+def extractActiveChannel(image, satellite_type):
+
     # Seuillage du raster
-    output_img = image.expression('MNDWI > -0.4 && NDVI < 0.2', 
+    if satellite_type == 'Landsat':
+        output_img = image.expression('MNDWI > -0.4 && NDVI < 0.2', 
                                                          {'MNDWI': image.select('MNDWI'),
+                                                          'NDVI': image.select('NDVI')}
+                                                         ).rename('AC')
+    elif satellite_type == 'Sentinel-2':
+        output_img = image.expression('NDWI > -0.4 && NDVI < 0.2', 
+                                                         {'NDWI': image.select('NDWI'),
                                                           'NDVI': image.select('NDVI')}
                                                          ).rename('AC')
     
@@ -95,8 +108,19 @@ def extractActiveChannel(image):
     return image.addBands(output_img)
 
 
-def classifyObjects(collection):
+def classifyObjects(collection, satellite_type):
+
+    def extractWaterWrapper(image):
+        return extractWater(image, satellite_type)
     
-    collection = collection.map(extractWater).map(extractVegetation).map(extractActiveChannel)
+    def extractActiveChannelWrapper(image):
+        return extractActiveChannel(image, satellite_type)
+
+        
+    collection = (collection
+                  .map(extractWaterWrapper)
+                  .map(extractVegetation)
+                  .map(extractActiveChannelWrapper))
+
 
     return collection
