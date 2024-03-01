@@ -28,8 +28,11 @@ def startWorkflow(dgo_asset: str,
                   cloud_filter: int = 80,
                   cloud_masking: bool = True,
                   mosaic_same_day: bool = True,
-                  split_size: int = 50,
-                  fid_field= 'DGO_FID'):
+                  split_size: int = None,
+                  fid_field= 'DGO_FID',
+                  watermask_expression: str = 'MNDWI >  0.0',
+                  activechannel_expression: str = 'MNDWI > -0.4 && NDVI < 0.2',
+                  vegetation_expression: str = 'NDVI > 0.15'):
     """
     Execute the classical GloUrbEE workflow for processing satellite imagery data for given extraction zones
 
@@ -47,6 +50,9 @@ def startWorkflow(dgo_asset: str,
     :param mosaic_same_day (bool, optional): Whether to merge all images taken on the same day. Defaults to True.
     :param split_size (int, optional): Size for splitting extraction zones into subsets for processing. Defaults to 50.
     :param fid_field (str, optional): Field name containing unique identifiers for extraction zones. Defaults to 'DGO_FID'.
+    :param watermask_expression (str, optional): Expression for water mask. Available bands are: BLUE, GREEN, RED, NIR, SWIR1, SWIR2, MNDWI, NDWI, NDVI. Defaults to 'MNDWI >  0.0'.
+    :param activechannel_expression (str, optional): Expression for active channel mask. Available bands are: BLUE, GREEN, RED, NIR, SWIR1, SWIR2, MNDWI, NDWI, NDVI. Defaults to 'MNDWI > -0.4 && NDVI < 0.2'.
+    :param vegetation_expression (str, optional): Expression for vegetation mask. Available bands are: BLUE, GREEN, RED, NIR, SWIR1, SWIR2, MNDWI, NDWI, NDVI. Defaults to 'NDVI > 0.15'.
 
     :returns workflow_id (str): Unique identifier for the executed workflow.
     """
@@ -54,16 +60,15 @@ def startWorkflow(dgo_asset: str,
 
     assert satellite_type in ['Landsat', 'Sentinel-2'], ('Satellite dataset not correctly defined. Set satellite_type either to "Landsat" or "Sentinel-2"')
 
+    if split_size:
+        print('Warning: split_size is deprecated and will be removed in future versions. All DGOs are now processed in parallel.')
+
     dgo_features = ee.FeatureCollection(dgo_asset)
 
     dgo_fids = dgo_features.aggregate_array(fid_field).getInfo()
-    n_dgos = dgo_features.size().getInfo()
-
-    subsets = np.array_split(dgo_fids, n_dgos/split_size)
-
     workflow_id = uuid.uuid4().hex
 
-    for i, sub in enumerate(subsets):
+    for i, sub in enumerate(dgo_fids):
         i+=1
         dgo_subset = dgo_features.filter(ee.Filter.inList(fid_field, sub.tolist()))
         
@@ -91,7 +96,10 @@ def startWorkflow(dgo_asset: str,
         collection = classification.calculateIndicators(collection)
 
         # Classify the objects using the indicators
-        collection = classification.classifyObjects(collection)
+        collection = classification.classifyObjects(collection=collection, 
+                                                    watermask_expression=watermask_expression, 
+                                                    activechannel_expression=activechannel_expression, 
+                                                    vegetation_expression=vegetation_expression)
 
         # Metrics calculation
         metrics = dgo_metrics.calculateDGOsMetrics(collection=collection, dgos=dgo_subset, scale=scale)
@@ -102,12 +110,12 @@ def startWorkflow(dgo_asset: str,
 
         task = ee.batch.Export.table.toAsset(
             collection=metrics,
-            description=f'Computation task {i}-{len(subsets)} for run {workflow_id}',
+            description=f'DGO {i}-{len(dgo_fids)} metrics for run {workflow_id}',
             assetId=assetId
         )
         task.start()
 
-        print(f'\rComputation task {i}/{len(subsets)} started', end=" ")
+        print(f'\rDGO {i}/{len(dgo_fids)} metrics queued', end=" ")
     
     return workflow_id
 

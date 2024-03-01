@@ -13,3 +13,6 @@ toolbarMode = "auto"
 [server]
 cookieSecret = "dontforgettochangeit"
 maxUploadSize = 50
+
+[browser]
+gatherUsageStats = false
