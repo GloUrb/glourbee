@@ -24,9 +24,9 @@ if 'metrics' not in st.session_state:
 
 st.title('Select a metrics dataset')
 
-assets = st.session_state['db'].query('select * from glourbmetrics where dgo_asset = :dgo_id', 
+assets = st.session_state['db'].query('select * from glourbmetrics where zones_asset = :zone_id', 
                                         ttl=0, 
-                                        params={'dgo_id': int(st.session_state['extraction_zones']['tableId'])})
+                                        params={'zone_id': int(st.session_state['extraction_zones']['tableId'])})
 
 if len(assets) >= 1:
     st.write('Check the already calculated metric datasets for your selected extraction zones. Check your task manager to update the tasks state.')
@@ -97,18 +97,18 @@ with st.form('calulate_metrics'):
 
     if submit_metrics:
         with st.spinner('Starting computation tasks...'):
-            # Récupérer la taille des DGOs
-            dgo_size = st.session_state['db'].query('SELECT dgo_size FROM glourbassets WHERE id = :i',
+            # Récupérer la taille des ZONEs
+            zones_size = st.session_state['db'].query('SELECT zones_size FROM glourbassets WHERE id = :i',
                                                     ttl=0, 
                                                     params={'i': int(st.session_state['extraction_zones']['tableId'])})
             
-            # Faire des paquets de 100km de DGOs
-            # split_size = 100000 / int(dgo_size['dgo_size'])
+            # Faire des paquets de 100km de ZONEs
+            # split_size = 100000 / int(zones_size['zones_size'])
             split_size = 1
 
             # Lancer le workflow
             run_id = workflow.startWorkflow(ee_project_name='ee-glourb',
-                                            dgo_asset=st.session_state['extraction_zones']['assetId'],
+                                            zones_asset=st.session_state['extraction_zones']['assetId'],
                                             satellite_type=satellite_type,
                                             start=start,
                                             end=stop,
@@ -120,10 +120,10 @@ with st.form('calulate_metrics'):
             
             # Mettre à jour la base de données
             with st.session_state['db'].session as session:
-                session.execute(text('INSERT INTO glourbmetrics (dgo_asset, run_by, glourbee_version, run_id, state, start_date, end_date, cloud_filter, cloud_masking, mosaic_same_day, satellite_type) \
-                                     VALUES (:dgo, :by, :vers, :run, :s, :start, :end, :filt, :mask, :mosaic, :sat);'),
+                session.execute(text('INSERT INTO glourbmetrics (zones_asset, run_by, glourbee_version, run_id, state, start_date, end_date, cloud_filter, cloud_masking, mosaic_same_day, satellite_type) \
+                                     VALUES (:zone, :by, :vers, :run, :s, :start, :end, :filt, :mask, :mosaic, :sat);'),
                                 {
-                                    'dgo': int(st.session_state['extraction_zones']['tableId']),
+                                    'zone': int(st.session_state['extraction_zones']['tableId']),
                                     'by': st.session_state['user'],
                                     'vers': glourbee_version,
                                     'run': run_id,
@@ -172,7 +172,7 @@ if st.button('Start computation task (no parameters)'):
     local_csv = os.path.join(st.session_state['tempdir'].name, 'indicators.csv')
 
     with st.spinner('Computing indicators...'):
-        workflow.indicatorsWorkflow(dgos_asset=st.session_state['extraction_zones']['features'], 
+        workflow.indicatorsWorkflow(zones_asset=st.session_state['extraction_zones']['features'], 
                                     output_csv=local_csv)
     
     with open(local_csv) as f:

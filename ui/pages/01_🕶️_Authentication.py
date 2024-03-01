@@ -30,7 +30,7 @@ if st.button("Authenticate with JSON key"):
             ee.Initialize(credentials)
 
             try:
-                ee.data.listAssets({'parent': 'projects/ee-glourb/assets/dgos'})
+                ee.data.listAssets({'parent': 'projects/ee-glourb/assets/zones'})
             
                 st.session_state['mail'] = json.loads(bytes_data)['client_email']
                 st.session_state['user'] = st.session_state['mail'].split("@")[0]

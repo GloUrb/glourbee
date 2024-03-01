@@ -2,15 +2,15 @@ import ee
 import geemap
 
 
-def imageVisualization(collection, time_starts, dgo_shp):
+def imageVisualization(collection, time_starts, zones_shp):
     
     output_map = geemap.Map()
-    output_map.addLayer(dgo_shp, name='DGOs')
-    output_map.center_object(dgo_shp)
+    output_map.addLayer(zones_shp, name='ZONEs')
+    output_map.center_object(zones_shp)
 
     output_map.add_labels(
-        dgo_shp,
-        "DGO_FID",
+        zones_shp,
+        "ZONE_FID",
         font_size="12pt",
         font_color="black",
         font_family="arial",

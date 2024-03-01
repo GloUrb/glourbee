@@ -14,13 +14,13 @@ from urllib.error import HTTPError
 from glourbee import (
     classification,
     data_management,
-    dgo_indicators,
-    dgo_metrics
+    zones_indicators,
+    zones_metrics
 )
 
 tempdir = tempfile.mkdtemp(prefix='glourbee_')
 
-def startWorkflow(dgo_asset: str,
+def startWorkflow(zones_asset: str,
                   ee_project_name: str = 'ee-glourb',
                   satellite_type: str = 'Landsat',
                   start: str = '1980-01-01',
@@ -29,7 +29,7 @@ def startWorkflow(dgo_asset: str,
                   cloud_masking: bool = True,
                   mosaic_same_day: bool = True,
                   split_size: int = None,
-                  fid_field= 'DGO_FID',
+                  fid_field= 'ZONE_FID',
                   watermask_expression: str = 'MNDWI >  0.0',
                   activechannel_expression: str = 'MNDWI > -0.4 && NDVI < 0.2',
                   vegetation_expression: str = 'NDVI > 0.15'):
@@ -40,7 +40,7 @@ def startWorkflow(dgo_asset: str,
     collects satellite imagery data according to the specified parameters, calculates various indicators, classifies objects, 
     computes metrics, and exports the results as assets to the specified Earth Engine project.
 
-    :param dgo_asset (str): Asset ID or path of the FeatureCollection containing extraction zones.
+    :param zones_asset (str): Asset ID or path of the FeatureCollection containing extraction zones.
     :param ee_project_name (str, optional): Earth Engine project name. Defaults to 'ee-glourb'.
     :param satellite_type (str, optional): Type of satellite imagery to use, 'Landsat' or 'Sentinel-2'. Defaults to 'Landsat'.
     :param start (str, optional): Start date for image collection (inclusive), formatted as 'YYYY-MM-DD'. Defaults to '1980-01-01'.
@@ -49,7 +49,7 @@ def startWorkflow(dgo_asset: str,
     :param cloud_masking (bool, optional): Whether to mask clouds on accepted images. Defaults to True.
     :param mosaic_same_day (bool, optional): Whether to merge all images taken on the same day. Defaults to True.
     :param split_size (int, optional): Size for splitting extraction zones into subsets for processing. Defaults to 50.
-    :param fid_field (str, optional): Field name containing unique identifiers for extraction zones. Defaults to 'DGO_FID'.
+    :param fid_field (str, optional): Field name containing unique identifiers for extraction zones. Defaults to 'ZONE_FID'.
     :param watermask_expression (str, optional): Expression for water mask. Available bands are: BLUE, GREEN, RED, NIR, SWIR1, SWIR2, MNDWI, NDWI, NDVI. Defaults to 'MNDWI >  0.0'.
     :param activechannel_expression (str, optional): Expression for active channel mask. Available bands are: BLUE, GREEN, RED, NIR, SWIR1, SWIR2, MNDWI, NDWI, NDVI. Defaults to 'MNDWI > -0.4 && NDVI < 0.2'.
     :param vegetation_expression (str, optional): Expression for vegetation mask. Available bands are: BLUE, GREEN, RED, NIR, SWIR1, SWIR2, MNDWI, NDWI, NDVI. Defaults to 'NDVI > 0.15'.
@@ -61,16 +61,16 @@ def startWorkflow(dgo_asset: str,
     assert satellite_type in ['Landsat', 'Sentinel-2'], ('Satellite dataset not correctly defined. Set satellite_type either to "Landsat" or "Sentinel-2"')
 
     if split_size:
-        print('Warning: split_size is deprecated and will be removed in future versions. All DGOs are now processed in parallel.')
+        print('Warning: split_size is deprecated and will be removed in future versions. All ZONEs are now processed in parallel.')
 
-    dgo_features = ee.FeatureCollection(dgo_asset)
+    zones_features = ee.FeatureCollection(zones_asset)
 
-    dgo_fids = dgo_features.aggregate_array(fid_field).getInfo()
+    zone_fids = zones_features.aggregate_array(fid_field).getInfo()
     workflow_id = uuid.uuid4().hex
 
-    for i, sub in enumerate(dgo_fids):
+    for i, sub in enumerate(zone_fids):
         i+=1
-        dgo_subset = dgo_features.filter(ee.Filter.inList(fid_field, sub.tolist()))
+        zone_subset = zones_features.filter(ee.Filter.inList(fid_field, sub.tolist()))
         
         if satellite_type == 'Landsat':
             scale = 30
@@ -80,7 +80,7 @@ def startWorkflow(dgo_asset: str,
                                                               cloud_filter=cloud_filter, # Maximum cloud coverage accepted (%)
                                                               cloud_masking=cloud_masking, # Set to False if you don't want to mask the clouds on accepted images
                                                               mosaic_same_day=mosaic_same_day, # Set to False if you don't want to merge all images by day
-                                                              roi=dgo_subset.union(1)) 
+                                                              roi=zone_subset.union(1)) 
 
         elif satellite_type == 'Sentinel-2':
             scale = 10
@@ -90,7 +90,7 @@ def startWorkflow(dgo_asset: str,
                                                               cloud_filter=cloud_filter, # Maximum cloud coverage accepted (%)
                                                               cloud_masking=cloud_masking, # Set to False if you don't want to mask the clouds on accepted images
                                                               mosaic_same_day=mosaic_same_day, # Set to False if you don't want to merge all images by day
-                                                              roi=dgo_subset.union(1)) 
+                                                              roi=zone_subset.union(1)) 
 
         # Calculate MNDWI, NDVI and NDWI
         collection = classification.calculateIndicators(collection)
@@ -102,7 +102,7 @@ def startWorkflow(dgo_asset: str,
                                                     vegetation_expression=vegetation_expression)
 
         # Metrics calculation
-        metrics = dgo_metrics.calculateDGOsMetrics(collection=collection, dgos=dgo_subset, scale=scale)
+        metrics = zones_metrics.calculateZONEsMetrics(collection=collection, zones=zone_subset, scale=scale)
 
         # Create computation task
         assetName = f'{workflow_id}_{i}'
@@ -110,12 +110,12 @@ def startWorkflow(dgo_asset: str,
 
         task = ee.batch.Export.table.toAsset(
             collection=metrics,
-            description=f'DGO {i}-{len(dgo_fids)} metrics for run {workflow_id}',
+            description=f'ZONE {i}-{len(zone_fids)} metrics for run {workflow_id}',
             assetId=assetId
         )
         task.start()
 
-        print(f'\rDGO {i}/{len(dgo_fids)} metrics queued', end=" ")
+        print(f'\rZONE {i}/{len(zone_fids)} metrics queued', end=" ")
     
     return workflow_id
 
@@ -192,8 +192,8 @@ def cleanAssets(run_id, ee_project_name):
         ee.data.deleteAsset(asset)
 
 
-def indicatorsWorkflow(dgos_asset, output_csv):
-    metrics = dgo_indicators.calculateGSWindicators(dgos_asset)
+def indicatorsWorkflow(zones_asset, output_csv):
+    metrics = zones_indicators.calculateGSWindicators(zones_asset)
     
     temp_metrics = os.path.join(tempdir, 'gsw_metrics_output.csv')
     urlretrieve(metrics.getDownloadUrl(), temp_metrics)

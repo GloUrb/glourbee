@@ -37,7 +37,7 @@ def addHeader(title: str = "Default title"):
         st.write('[Report a bug or ask for new feature](https://github.com/EVS-GIS/glourbee/issues)')
 
 
-def select_dgos(df, key):
+def select_zones(df, key):
     """
     From https://docs.streamlit.io/knowledge-base/using-streamlit/how-to-get-row-selections
     """
@@ -53,10 +53,10 @@ def select_dgos(df, key):
         column_config={"Selected": st.column_config.CheckboxColumn(required=True),
                        "river_name": st.column_config.TextColumn('Extraction zones name'),
                        "description": st.column_config.TextColumn('Extraction zones description'),
-                       "dgo_size": st.column_config.NumberColumn('DGO size if concerned', format='%d m'),
+                       "zones_size": st.column_config.NumberColumn('ZONE size if concerned', format='%d m'),
                        "uploader": st.column_config.TextColumn('Uploader'),
                        "upload_date": st.column_config.DatetimeColumn('Upload date')},
-        column_order=("Selected", "river_name", "description", "dgo_size", "uploader", "upload_date"),
+        column_order=("Selected", "river_name", "description", "zones_size", "uploader", "upload_date"),
         disabled=df.columns,
     )
 
@@ -129,31 +129,31 @@ def credentials(
 
 
 """-----------------------------------------------------------------------------------------------------------------
------------------------------------------------------- DGOs --------------------------------------------------------
+------------------------------------------------------ ZONEs --------------------------------------------------------
 ------------------------------------------------------------------------------------------------------------------"""
 
 
-def upload_dgos(
-    DGO="./example_data/Yamuna_segm_2km_UTF8.shp", ee_project_name="ee-glourb"
+def upload_zones(
+    ZONE="./example_data/Yamuna_segm_2km_UTF8.shp", ee_project_name="ee-glourb"
 ):
-    """Returns the dgos already uploaded to Earth Engine for the same project
+    """Returns the zones already uploaded to Earth Engine for the same project
 
     Parameters
     ----------
-    DGO : str, optional
+    ZONE : str, optional
         id of the wanted asset, by default './example_data/Yamuna_segm_2km_UTF8.shp'
     ee_project_name : str, optional
         name of the project in Google Earth Engine, by default 'ee-glourb'
     """
     from glourbee import assets_management
 
-    dgo_assetId, dgo_features = assets_management.uploadDGOs(
-        DGO, ee_project_name=ee_project_name, simplify_tolerance=15
+    zones_assetId, zones_features = assets_management.uploadExtractionZones(
+        ZONE, ee_project_name=ee_project_name, simplify_tolerance=15
     )
-    return (dgo_assetId, dgo_features)
+    return (zones_assetId, zones_features)
 
 
-def display_map(title, location=[0, 0], dgo_features=None, zoom=8):
+def display_map(title, location=[0, 0], zones_features=None, zoom=8):
     """Displays a map centered on the location in Streamlit
 
     Parameters
@@ -162,8 +162,8 @@ def display_map(title, location=[0, 0], dgo_features=None, zoom=8):
         title of the map
     location : list, optional
         tuple of the latitude, longitude to be centered on, by default [0,0]
-    dgo_features : _type_, optional
-        dgos that can be added on the map, by default None
+    zones_features : _type_, optional
+        zones that can be added on the map, by default None
     zoom : int, optional
         Zoom on the map, by default 8
     """
@@ -174,9 +174,9 @@ def display_map(title, location=[0, 0], dgo_features=None, zoom=8):
     # Create a folium map
     m = folium.Map(location=location, zoom_start=zoom, title=title)
 
-    if dgo_features:
-        features = dgo_features
-        folium.GeoJson(data=features.getInfo(), name="DGO Features").add_to(m)
+    if zones_features:
+        features = zones_features
+        folium.GeoJson(data=features.getInfo(), name="ZONE Features").add_to(m)
 
     return m
 
@@ -212,8 +212,8 @@ def cities(file_path="cities.txt"):
     return city_data
 
 
-def dgo_to_search(town_to_search, river_to_search):
-    """Gets the dgos from GEE that match the town_to_search and/or river_to_search
+def zone_to_search(town_to_search, river_to_search):
+    """Gets the zones from GEE that match the town_to_search and/or river_to_search
 
     Parameters
     ----------
@@ -225,17 +225,17 @@ def dgo_to_search(town_to_search, river_to_search):
     Returns
     -------
     list
-        list of the matching dgos id and time of upload
+        list of the matching zones id and time of upload
     """
-    list_assets = ee.data.listAssets({'parent': "projects/ee-glourb/assets/dgos"})["assets"]
+    list_assets = ee.data.listAssets({'parent': "projects/ee-glourb/assets/zones"})["assets"]
     id = []
     update_times = []
     for i in range(len(list_assets)):
         id.append(
-            ee.data.listAssets({'parent': "projects/ee-glourb/assets/dgos"})["assets"][i]["id"]
+            ee.data.listAssets({'parent': "projects/ee-glourb/assets/zones"})["assets"][i]["id"]
         )
         update_times.append(
-            ee.data.listAssets({'parent': "projects/ee-glourb/assets/dgos"})["assets"][i][
+            ee.data.listAssets({'parent': "projects/ee-glourb/assets/zones"})["assets"][i][
                 "updateTime"
             ]
         )
@@ -254,12 +254,12 @@ def dgo_to_search(town_to_search, river_to_search):
 
 
 def remove_line_by_criteria(id_to_remove):
-    """Removes a dgo uploaded on GEE by its id
+    """Removes a zone uploaded on GEE by its id
 
     Parameters
     ----------
     id_to_remove : str
-        id of the dgo to remove
+        id of the zone to remove
     """
     asset_path_to_delete = id_to_remove
     try:
@@ -269,15 +269,15 @@ def remove_line_by_criteria(id_to_remove):
         st.error(f"Error: {str(e)}")
 
 
-def uploadDGOs(
-    dgo_shapefile, file_name, simplify_tolerance=15, ee_project_name="ee-glourb"
+def uploadExtractionZones(
+    zone_shapefile, file_name, simplify_tolerance=15, ee_project_name="ee-glourb"
 ):
-    """Function to upload dgos to GEE.
+    """Function to upload zones to GEE.
 
     Parameters
     ----------
-    dgo_shapefile : .shp
-        shapefile containing the dgos
+    zone_shapefile : .shp
+        shapefile containing the zones
 
     file_name : str
         Name of the shape file
@@ -292,29 +292,29 @@ def uploadDGOs(
     import fiona
     from glourbee import assets_management
 
-    gdf = gpd.read_file(dgo_shapefile)
+    gdf = gpd.read_file(zone_shapefile)
     gdf["geometry"] = gdf.simplify(simplify_tolerance)
 
-    # If there are fewer than 80 DGOs, import directly into GEE
+    # If there are fewer than 80 ZONEs, import directly into GEE
     if gdf.shape[0] <= 80:
         # Convert GeoDataFrame to Earth Engine FeatureCollection
-        dgo_shp = geemap.gdf_to_ee(gdf)
+        zones_shp = geemap.gdf_to_ee(gdf)
 
         # Upload the asset
         assetName = (
             f"{os.path.splitext(os.path.basename(file_name))[0]}_{uuid.uuid4().hex}"
         )
-        assetId = f"projects/{ee_project_name}/assets/dgos/{assetName}"
+        assetId = f"projects/{ee_project_name}/assets/zones/{assetName}"
 
         if assets_management.uploadAsset(
-            dgo_shp, "DGOs uploaded from glourbee notebook", assetId
+            zones_shp, "ZONEs uploaded from glourbee notebook", assetId
         ):
             # Return the exported asset and its ID
             return assetId, ee.FeatureCollection(assetId)
         else:
             return  # TODO: replace by raise error
 
-    # If there are more than 80 DGOs, split the shapefile for upload and then reassemble
+    # If there are more than 80 ZONEs, split the shapefile for upload and then reassemble
     else:
         nsplit = round(gdf.shape[0] / 80)
         splitted_gdf = np.array_split(gdf, nsplit)
@@ -323,15 +323,15 @@ def uploadDGOs(
         task_list = []
 
         for n, subgdf in enumerate(splitted_gdf):
-            dgo_shp = geemap.gdf_to_ee(subgdf)
+            zones_shp = geemap.gdf_to_ee(subgdf)
 
             # Upload the asset
             assetName = (
                 f"{os.path.splitext(os.path.basename(file_name))[0]}_{uuid.uuid4().hex}"
             )
-            assetId = f"projects/{ee_project_name}/assets/dgos/tmp/{assetName}"
+            assetId = f"projects/{ee_project_name}/assets/zones/tmp/{assetName}"
             taskid = assets_management.uploadAsset(
-                dgo_shp, "DGOs uploaded from glourbee notebook", assetId, wait=False
+                zones_shp, "ZONEs uploaded from glourbee notebook", assetId, wait=False
             )
 
             if taskid:
@@ -340,7 +340,7 @@ def uploadDGOs(
                 # Add the taskid to the list of tasks to monitor
                 task_list.append(taskid)
 
-                print(f"Import DGOs part {n + 1}/{len(splitted_gdf)} started.")
+                print(f"Import ZONEs part {n + 1}/{len(splitted_gdf)} started.")
             else:
                 return  # TODO: replace by raise error
 
@@ -354,10 +354,10 @@ def uploadDGOs(
 
         # Upload the asset
         assetName = f"{os.path.splitext(os.path.basename(file_name))[0]}_final_{uuid.uuid4().hex}"
-        assetId = f"projects/{ee_project_name}/assets/dgos/{assetName}"
+        assetId = f"projects/{ee_project_name}/assets/zones/{assetName}"
 
         if assets_management.uploadAsset(
-            output_fc, "DGOs uploaded from glourbee notebook", assetId
+            output_fc, "ZONEs uploaded from glourbee notebook", assetId
         ):
             # Delete temporary assets
             for asset in assets_list:

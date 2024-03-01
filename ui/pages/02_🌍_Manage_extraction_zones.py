@@ -25,7 +25,7 @@ if not st.session_state['extraction_zones']['assetId']:
     assets = st.session_state['db'].query('select * from glourbassets', ttl=0)
 
     st.title('Select already uploaded extraction zones')
-    selection = ui.select_dgos(assets, key='selector')
+    selection = ui.select_zones(assets, key='selector')
 
     if len(selection) == 1:
         st.session_state['extraction_zones']['assetId'] = selection['asset_id'].iloc[0]
@@ -47,7 +47,7 @@ else:
     map.center_object(st.session_state['extraction_zones']['features'])
     map.add_labels(
         st.session_state['extraction_zones']['features'],
-        "DGO_FID",
+        "ZONE_FID",
         font_size="12pt",
         font_color="black",
         font_family="arial",
@@ -64,9 +64,9 @@ st.warning("Please reuse already uploaded extraction zones if possible to avoid 
 
 with st.form('upload_new'):
     river_name = st.text_input('Extraction zones name', max_chars=50, help = 'If you are uploading extraction zones for anything else than a river, name correctly so other GloUrbEE users can find it')
-    description = st.text_area('Extraction zones description', max_chars=100, help = 'Describe your extraction zones: for example, the DGOs creation method')
-    dgo_size = st.number_input('DGO size (in meters, if applies)', help='If you are uploading extraction zones for anything else than a river, just let a zero here')
-    dgo_file = st.file_uploader('Extraction zones file', type=['gpkg', 'shp', 'shx', 'dbf', 'prj', 'cpg'], accept_multiple_files=True)
+    description = st.text_area('Extraction zones description', max_chars=100, help = 'Describe your extraction zones: for example, the ZONEs creation method')
+    zones_size = st.number_input('ZONE size (in meters, if applies)', help='If you are uploading extraction zones for anything else than a river, just let a zero here')
+    zone_file = st.file_uploader('Extraction zones file', type=['gpkg', 'shp', 'shx', 'dbf', 'prj', 'cpg'], accept_multiple_files=True)
 
     submitted = st.form_submit_button('Upload to GEE')
     if submitted:
@@ -74,14 +74,14 @@ with st.form('upload_new'):
         if not river_name:
             st.error('You need to specify river name')
             validate = False
-        if not dgo_file:
+        if not zone_file:
             st.error('You need to specify extraction zones file')
             validate = False
         
         if validate:
             local_file = []
 
-            for file in dgo_file:
+            for file in zone_file:
                 file_path = os.path.join(st.session_state['tempdir'].name, file.name)
 
                 if os.path.splitext(file.name)[1].lower() in ['.gpkg', '.shp']:
@@ -93,20 +93,20 @@ with st.form('upload_new'):
                 st.error('Please provide only one **shp** or one **gpkg** file')
             else:
                 with st.spinner("Uploading asset... Don't close this window"):
-                    dgo_assetId, dgo_features = assets_management.uploadDGOs(
+                    zones_assetId, zones_features = assets_management.uploadExtractionZones(
                         local_file[0], 
                         ee_project_name='ee-glourb', 
                         simplify_tolerance=5)
                     
-                    st.session_state['extraction_zones']['features'] = dgo_features
-                    st.session_state['extraction_zones']['assetId'] = dgo_assetId
+                    st.session_state['extraction_zones']['features'] = zones_features
+                    st.session_state['extraction_zones']['assetId'] = zones_assetId
 
                     with st.session_state['db'].session as session:
-                        session.execute(text("INSERT INTO glourbassets (river_name, dgo_size, asset_id, uploader, description) \
+                        session.execute(text("INSERT INTO glourbassets (river_name, zones_size, asset_id, uploader, description) \
                                              VALUES (:r, :d, :a, :u, :des);"),
                                         {'r': river_name,
-                                        'd': dgo_size,
-                                        'a': dgo_assetId,
+                                        'd': zones_size,
+                                        'a': zones_assetId,
                                         'u': st.session_state['user'],
                                         'des': description})
                         session.commit()
@@ -130,7 +130,7 @@ else:
         st.warning('You are about to delete a extraction zones asset and all the metrics calculated with it. This is not reversible')
         #TODO: Delete metrics associated with asset
 
-        selection = ui.select_dgos(assets, key='deletor')
+        selection = ui.select_zones(assets, key='deletor')
 
         if len(selection) == 1:
 

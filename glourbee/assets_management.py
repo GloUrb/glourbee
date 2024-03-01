@@ -53,30 +53,30 @@ def waitTasks(task_list):
     print(f'\rAll {len(waitlist)} tasks finished ({time.time() - start}s elapsed)')
 
 
-def uploadDGOs(dgo_shapefile_path, simplify_tolerance=15, ee_project_name='ee-glourb'):
+def uploadExtractionZones(zones_shapefile_path, simplify_tolerance=15, ee_project_name='ee-glourb'):
 
     if simplify_tolerance < 1:
         print('Simplify tolerance should be >= 1')
         return
     
-    gdf = gpd.read_file(dgo_shapefile_path)
+    gdf = gpd.read_file(zones_shapefile_path)
     gdf['geometry'] = gdf.simplify(simplify_tolerance)
 
-    # Si il y a moins de 80 DGOs, on peux les importer direct dans GEE
+    # Si il y a moins de 80 ZONEs, on peux les importer direct dans GEE
     if gdf.shape[0] <= 80:
-        # Charger les DGOs dans EarthEngine
-        dgo_shp = geemap.gdf_to_ee(gdf)
+        # Charger les ZONEs dans EarthEngine
+        zones_shp = geemap.gdf_to_ee(gdf)
 
         # Uploader l'asset
-        assetName = f'{os.path.splitext(os.path.basename(dgo_shapefile_path))[0]}_{uuid.uuid4().hex}'
-        assetId = f'projects/{ee_project_name}/assets/dgos/{assetName}'
-        if uploadAsset(dgo_shp, f'DGOs {assetName} uploaded from glourbee', assetId):
+        assetName = f'{os.path.splitext(os.path.basename(zones_shapefile_path))[0]}_{uuid.uuid4().hex}'
+        assetId = f'projects/{ee_project_name}/assets/zones/{assetName}'
+        if uploadAsset(zones_shp, f'ZONEs {assetName} uploaded from glourbee', assetId):
             # Renvoyer l'asset exporté et son id
             return(assetId, ee.FeatureCollection(assetId))
         else:
             return #TODO: replace by raise error
     
-    # Si il y a plus de 80 DGOs, on dépasse la payload request size de GEE, il faut découper le shapefile pour l'uploader, puis le réassembler
+    # Si il y a plus de 80 ZONEs, on dépasse la payload request size de GEE, il faut découper le shapefile pour l'uploader, puis le réassembler
     else:
         nsplit = round(gdf.shape[0] / 80)
         splitted_gdf = np.array_split(gdf, nsplit)
@@ -85,12 +85,12 @@ def uploadDGOs(dgo_shapefile_path, simplify_tolerance=15, ee_project_name='ee-gl
         task_list = list()
 
         for n, subgdf in enumerate(splitted_gdf):
-            dgo_shp = geemap.gdf_to_ee(subgdf)
+            zones_shp = geemap.gdf_to_ee(subgdf)
 
             # Uploader l'asset
-            assetName = f'{os.path.splitext(os.path.basename(dgo_shapefile_path))[0]}_{uuid.uuid4().hex}'
-            assetId = f'projects/{ee_project_name}/assets/dgos/tmp/{assetName}'
-            taskid = uploadAsset(dgo_shp, f'DGOs {assetName} uploaded from glourbee task {n}-{nsplit}', assetId, wait=False)
+            assetName = f'{os.path.splitext(os.path.basename(zones_shapefile_path))[0]}_{uuid.uuid4().hex}'
+            assetId = f'projects/{ee_project_name}/assets/zones/tmp/{assetName}'
+            taskid = uploadAsset(zones_shp, f'ZONEs {assetName} uploaded from glourbee task {n}-{nsplit}', assetId, wait=False)
             
             if taskid:
                 # Ajouter l'assetId à la liste à fusionner
@@ -99,7 +99,7 @@ def uploadDGOs(dgo_shapefile_path, simplify_tolerance=15, ee_project_name='ee-gl
                 # Ajouter la taskid à la liste de taches à surveiller
                 task_list.append(taskid)
 
-                print(f'Import DGOs part {n+1}/{len(splitted_gdf)} started.')
+                print(f'Import ZONEs part {n+1}/{len(splitted_gdf)} started.')
             else:
                 return #TODO: replace by raise error
         
@@ -110,9 +110,9 @@ def uploadDGOs(dgo_shapefile_path, simplify_tolerance=15, ee_project_name='ee-gl
         output_fc = ee.FeatureCollection([ee.FeatureCollection(asset) for asset in assets_list]).flatten()
 
         # Uploader l'asset
-        assetName = f'{os.path.splitext(os.path.basename(dgo_shapefile_path))[0]}_final_{uuid.uuid4().hex}'
-        assetId = f'projects/{ee_project_name}/assets/dgos/{assetName}'
-        if uploadAsset(output_fc, 'DGOs uploaded from glourbee notebook', assetId):
+        assetName = f'{os.path.splitext(os.path.basename(zones_shapefile_path))[0]}_final_{uuid.uuid4().hex}'
+        assetId = f'projects/{ee_project_name}/assets/zones/{assetName}'
+        if uploadAsset(output_fc, 'ZONEs uploaded from glourbee notebook', assetId):
             # Supprimer les assets temporaires
             for asset in assets_list:
                 ee.data.deleteAsset(asset)
@@ -141,7 +141,7 @@ def downloadMetrics(metrics, output_file, ee_project_name='ee-glourb'):
                                     'CLOUD_SCORE',
                                     'COVERAGE_SCORE',
                                     'DATE_ACQUIRED',
-                                    'DGO_FID',
+                                    'ZONE_FID',
                                     'MEAN_AC_MNDWI',
                                     'MEAN_AC_NDVI',
                                     'MEAN_MNDWI',

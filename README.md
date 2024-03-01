@@ -53,24 +53,24 @@ If you want the database to be persistent, you can mount /app/ui/lib/db/glourbee
 | metric name | description |   
 |---|---|
 | AC_AREA | Active Channel area (pixels) |
-| CLOUD_SCORE | Percent of the DGO covered by clouds (%) |
-| COVERAGE_SCORE | Percent of the DGO covered by the Landsat image (%) |
+| CLOUD_SCORE | Percent of the ZONE covered by clouds (%) |
+| COVERAGE_SCORE | Percent of the ZONE covered by the Landsat image (%) |
 | SCALE | Size of a pixel on the selected imagery dataset (meters) |
 | MEAN_AC_MNDWI | Mean MNDWI in the active channel surface |
 | MEAN_AC_NDVI | Mean NDVI in the active channel surface |
 | ~~MEAN_DRY_MNDWI~~ | ~~Mean MNDWI in the surface which is not water~~  |
-| MEAN_MNDWI | Mean MNDWI of the full DGO |
-| MEAN_NDVI| Mean NDVI of the full DGO |
+| MEAN_MNDWI | Mean MNDWI of the full ZONE |
+| MEAN_NDVI| Mean NDVI of the full ZONE |
 | MEAN_VEGETATION_MNDWI | Mean MNDWI in the vegetation surface |
 | MEAN_VEGETATION_NDVI | Mean NDVI in the vegetation surface |
 | MEAN_WATER_MNDWI | Mean MNDWI in the water surface |
 | VEGETATION_AREA | Vegetation area (pixels) |
-| VEGETATION_POLYGONS | Number of vegetation patches inside the DGO |
-| VEGETATION_POLYGONS_p* | Percentiles of the vegetation patches size (in pixels) inside the DGO |
+| VEGETATION_POLYGONS | Number of vegetation patches inside the ZONE |
+| VEGETATION_POLYGONS_p* | Percentiles of the vegetation patches size (in pixels) inside the ZONE |
 | VEGETATION_PERIMETER | Vegetation surface perimeter (projection unit) |
 | WATER_AREA | Water area (pixels) |
-| WATER_POLYGONS | Number of water patches inside the DGO |
-| WATER_POLYGONS_p* | Percentiles of the water patches size (in pixels) inside the DGO |
+| WATER_POLYGONS | Number of water patches inside the ZONE |
+| WATER_POLYGONS_p* | Percentiles of the water patches size (in pixels) inside the ZONE |
 | WATER_PERIMETER | Water surface perimeter (projection unit) |
 
 ## Indicators
