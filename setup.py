@@ -12,7 +12,7 @@ setup(
         'earthengine-api',
         'pandas',
         'geemap',
-        'geetools',
+        'geetools==0.6.14', # mosaicSameDay deprecated in 1.0.0 :(
         # 'ipython',
         # 'ipykernel',
         # 'ipyleaflet==0.16',

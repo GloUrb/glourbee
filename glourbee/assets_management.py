@@ -1,159 +1,287 @@
 import ee
-import geemap
-import time
+import tempfile
 import os
 import uuid
-import numpy as np
+import pandas as pd
 import geopandas as gpd
 from urllib.request import urlretrieve
+from time import sleep
+from datetime import datetime
 
 
-def uploadAsset(collection, description, assetId, wait=True):
-    # Créer la tache d'export
-    task = ee.batch.Export.table.toAsset(
-        collection=collection,
-        description=description,
-        assetId=assetId
-    )
+class GlourbEEDataset:
+    """
+    Class for managing extraction zones in Earth Engine.
+    """
 
-    # Démarrer la tache d'export
-    start = time.time()
-    task.start()
+    def __init__(self,
+                 ee_project_name: str = 'ee-glourb',
+                 asset_uuid: str = None):
+        """
+        Initialize the ExtractionZones object.
+        """
 
-    # Surveiller la tache d'export si wait
-    if wait:
-        while task.active():
-            print(f'\rUploading asset... ({time.time() - start}s elapsed)', end=" ")
-            time.sleep(5)
-        print(f'\rEnd of asset upload ({time.time() - start}s elapsed). You can reload your asset with this assetId: {assetId}')
+        self.ee_project_name = ee_project_name
+        self.gee_assets = []
 
-        # Vérifier que la tache d'export s'est terminée correctement
-        if task.status()['state'] == 'COMPLETED':
-            return True
+        self.gee_dir = f'projects/{self.ee_project_name}/assets/extraction_zones/{asset_uuid}'
+
+        self.asset_uuid = asset_uuid
+        if not self.asset_uuid:
+            self.asset_uuid = uuid.uuid4().hex
+
+    def update_gee_state(self):
+        """
+        Update the state of the asset in Earth Engine.
+        """
+
+        # Check assets
+        root_dir = os.path.dirname(self.gee_dir)
+        root_content = ee.data.listAssets({'parent': root_dir})
+        root_names = [asset['name'] for asset in root_content['assets']]
+
+        if not self.gee_dir in root_names:
+            ee.data.createAsset({'type': 'Folder'}, self.gee_dir)
+            self.gee_assets = []
+            self.child_metrics = []
         else:
-            print('{}'.format(task.status()))
-            return False #TODO: replace by raise error
-    
-    # Si pas wait, on attends pas la fin de la tache d'import et on renvoie juste son id
-    else:
-        return task.id
+            dir_content = ee.data.listAssets({'parent': self.gee_dir})
+            self.gee_assets = [
+                asset for asset in dir_content['assets'] if asset['type'] == 'TABLE']
+            self.child_metrics = [
+                asset for asset in dir_content['assets'] if asset['type'] == 'FOLDER']
 
+        self.gee_state = 'none'
 
-def waitTasks(task_list):
-    start = time.time()
+        if len(self.gee_assets) > 0:
+            self.gee_state = f'partial ({len(self.gee_assets)}/{self.len})'
 
-    waitlist = [task for task in ee.batch.Task.list() if task.id in task_list]
-    running = [task for task in waitlist if task.active()]
+        if len(self.gee_assets) == self.len:
+            self.gee_state = 'complete'
 
-    while len(running) > 0:
-        print(f'\rWait for {len(running)}/{len(waitlist)} tasks to finish ({time.time() - start}s elapsed)', end=' ')
-        time.sleep(5)
-        running = [task for task in waitlist if task.active()]
-    
-    print(f'\rAll {len(waitlist)} tasks finished ({time.time() - start}s elapsed)')
+        # Check linked tasks
+        ee_tasks = ee.data.listOperations()
+        self.linked_tasks = [
+            t for t in ee_tasks if f'{self.asset_uuid}' in t['metadata']['description'] and t['metadata']['state'] != 'COMPLETED']
 
+    def wait_for_tasks(self, silent: bool = False):
+        tasks = self.linked_tasks
 
-def uploadExtractionZones(zones_shapefile_path, simplify_tolerance=15, ee_project_name='ee-glourb'):
-
-    if simplify_tolerance < 1:
-        print('Simplify tolerance should be >= 1')
-        return
-    
-    gdf = gpd.read_file(zones_shapefile_path)
-    gdf['geometry'] = gdf.simplify(simplify_tolerance)
-
-    # Si il y a moins de 80 ZONEs, on peux les importer direct dans GEE
-    if gdf.shape[0] <= 80:
-        # Charger les ZONEs dans EarthEngine
-        zones_shp = geemap.gdf_to_ee(gdf)
-
-        # Uploader l'asset
-        assetName = f'{os.path.splitext(os.path.basename(zones_shapefile_path))[0]}_{uuid.uuid4().hex}'
-        assetId = f'projects/{ee_project_name}/assets/zones/{assetName}'
-        if uploadAsset(zones_shp, f'ZONEs {assetName} uploaded from glourbee', assetId):
-            # Renvoyer l'asset exporté et son id
-            return(assetId, ee.FeatureCollection(assetId))
-        else:
-            return #TODO: replace by raise error
-    
-    # Si il y a plus de 80 ZONEs, on dépasse la payload request size de GEE, il faut découper le shapefile pour l'uploader, puis le réassembler
-    else:
-        nsplit = round(gdf.shape[0] / 80)
-        splitted_gdf = np.array_split(gdf, nsplit)
-
-        assets_list = list()
-        task_list = list()
-
-        for n, subgdf in enumerate(splitted_gdf):
-            zones_shp = geemap.gdf_to_ee(subgdf)
-
-            # Uploader l'asset
-            assetName = f'{os.path.splitext(os.path.basename(zones_shapefile_path))[0]}_{uuid.uuid4().hex}'
-            assetId = f'projects/{ee_project_name}/assets/zones/tmp/{assetName}'
-            taskid = uploadAsset(zones_shp, f'ZONEs {assetName} uploaded from glourbee task {n}-{nsplit}', assetId, wait=False)
+        running_tasks = [t for t in tasks if t['metadata']['state'] in [
+            'RUNNING', 'SUBMITTED', 'PENDING']]
+        while len(running_tasks) > 0:
+            if not silent:
+                print(f'\rwaiting for {len(running_tasks)} tasks to finish', end=" ")
             
-            if taskid:
-                # Ajouter l'assetId à la liste à fusionner
-                assets_list.append(assetId)
+            sleep(10)
+            self.update_gee_state()
+            tasks = self.linked_tasks
+            running_tasks = [
+                t for t in tasks if t['metadata']['state'] in ['RUNNING', 'SUBMITTED', 'PENDING']]
+            
 
-                # Ajouter la taskid à la liste de taches à surveiller
-                task_list.append(taskid)
+    def cancel_linked_tasks(self, silent: bool = False):
+        """
+        Cancel the linked computation, upload or export running tasks.
+        """
+        self.update_gee_state()
 
-                print(f'Import ZONEs part {n+1}/{len(splitted_gdf)} started.')
-            else:
-                return #TODO: replace by raise error
+        for i, task in enumerate(self.linked_tasks):
+            ee.data.cancelOperation(task['name'])
+
+            if not silent:
+                print(
+                    f'\rTask {i+1}/{len(self.linked_tasks)} cancelled', end=" ")
+
+    def delete(self):
+        """
+        Delete the assets and all the assets from Earth Engine.
+        """
+
+        child_assets = ee.data.listAssets({'parent': self.gee_dir})['assets']
+
+        if len(child_assets) > 0:
+            for child in child_assets:
+                if child['type'] in ['FOLDER','IMAGE_COLLECTION']:
+                    
+                    subchild_assets = ee.data.listAssets({'parent': child['name']})['assets']
+
+                    if len(subchild_assets) > 0:
+                        for subchild in subchild_assets:
+                            ee.data.deleteAsset(subchild['name'])
+                    
+                ee.data.deleteAsset(child['name'])
+
+        ee.data.deleteAsset(self.gee_dir)
+
+
+class ExtractionZones(GlourbEEDataset):
+    def __init__(self, 
+                 local_file: str = './example_data/Lhasa_RC_DGO2km_updated.shp', 
+                 ee_project_name: str = 'ee-glourb', 
+                 asset_uuid: str = None,
+                 fid_field: str = 'DGO_FID',
+                 zone_type: str = 'DGOs'):
         
-        # Attendre la fin des uploads
-        waitTasks(task_list=task_list)
+        super().__init__(ee_project_name, asset_uuid)
+
+        self.child_metrics = []
+        self.fid_field = fid_field
+
+        # Vérifier que le fichier local existe
+        self.local_file = local_file
+        assert os.path.exists(
+            self.local_file), f'Local file {self.local_file} does not exist.'
+        
+        # Vérifier que le champ FID existe
+        gdf = gpd.read_file(self.local_file)
+        assert self.fid_field in gdf.columns, f'FID field {self.fid_field} does not exist in the local file.'
+        assert gdf[self.fid_field].dtype.kind in 'iu', f'FID field {self.fid_field} should be an integer.'
+        
+        # Récupérer le nombre d'entités
+        gdf = gpd.read_file(self.local_file)
+        self.len = len(gdf)
+
+        # Récupérer le nom du fichier
+        self.name = os.path.splitext(os.path.basename(self.local_file))[0]
+
+        # Récupérer les infos sur le dossier GEE
+        self.gee_dir = f'projects/{self.ee_project_name}/assets/extraction_zones/{self.asset_uuid}'
+        self.update_gee_state()
+
+    def upload_to_gee(self, simplify_tolerance: int = 15, silent: bool = False):
+        """
+        Upload the extraction zones to Earth Engine.
+
+        Args:
+            simplify_tolerance (int, optional): Tolerance for simplifying the geometries. Defaults to 15.
+            silent (bool, optional): If True, do not print progress. Defaults to False.
+        """
+
+        assert simplify_tolerance >= 1, 'Simplify tolerance should be >= 1'
+
+        # Ouvrir le fichier local
+        gdf = gpd.read_file(self.local_file)
+        gdf['geometry'] = gdf.simplify(simplify_tolerance)
+        gdf.to_crs(4326, inplace=True)
+
+        # splitted_gdf = np.array_split(gdf, self.len)
+
+        # Boucler sur les entités
+        for row in gdf.iterfeatures():
+            fc = ee.FeatureCollection([ee.Feature(row)])
+            fid = row['properties'][self.fid_field]
+
+            assetId = f'{self.gee_dir}/{self.name}_{fid:04}'
+
+            # Créer la tache d'export
+            task = ee.batch.Export.table.toAsset(
+                collection=fc,
+                description=f'upload {self.asset_uuid} fid {fid:04}',
+                assetId=assetId
+            )
+            task.start()
+
+            if not silent:
+                print(f'\rUpload zone {fid:04} started', end=" ")
             
-        # Fusionner les assets uploadés en un seul
-        output_fc = ee.FeatureCollection([ee.FeatureCollection(asset) for asset in assets_list]).flatten()
+        self.update_gee_state()
+        
 
-        # Uploader l'asset
-        assetName = f'{os.path.splitext(os.path.basename(zones_shapefile_path))[0]}_final_{uuid.uuid4().hex}'
-        assetId = f'projects/{ee_project_name}/assets/zones/{assetName}'
-        if uploadAsset(output_fc, 'ZONEs uploaded from glourbee notebook', assetId):
-            # Supprimer les assets temporaires
-            for asset in assets_list:
-                ee.data.deleteAsset(asset)
+class MetricsDataset(GlourbEEDataset):
+    def __init__(self, 
+                 ee_project_name: str = 'ee-glourb', 
+                 asset_uuid: str = None,
+                 parent_zones: ExtractionZones = None):
+        super().__init__(ee_project_name, asset_uuid)
 
-            # Renvoyer l'asset final et son assetId
-            return(assetId, ee.FeatureCollection(assetId))
+        self.parent_zones = parent_zones
+        self.len = self.parent_zones.len
 
-        else:
-            return #TODO: replace by raise error
+        self.name = f'{self.parent_zones.name}_{datetime.now().strftime("%Y%m%d_%H%M%S")}'
 
+        self.gee_dir = f'{self.parent_zones.gee_dir}/{self.asset_uuid}'
+        self.update_gee_state()
+
+
+    def compute_zone_metrics(self, fid: int, metrics: ee.FeatureCollection, silent: bool = False):
+        """
+        Compute the metrics for a zone and upload them to Earth Engine.
+
+        Args:
+            fid (int): Feature ID of the zone.
+            metrics (ee.FeatureCollection): Metrics to upload.
+            silent (bool, optional): If True, do not print progress. Defaults to False.
+        """
+
+        assetId = f'{self.gee_dir}/{self.name}_{fid:04}'
+
+        # Créer la tache d'export
+        task = ee.batch.Export.table.toAsset(
+            collection=metrics,
+            description=f'compute {self.asset_uuid} fid {fid:04}',
+            assetId=assetId
+        )
+        task.start()
+
+        if not silent:
+            print(f'\rCompute metrics for zone {fid:04} started', end=" ")
+
+        self.update_gee_state()
+
+
+    def download(self, output_file: str = './example_data/output.csv', overwrite: bool = False, silent: bool = False):
+        """
+        Download the assets from Earth Engine.
+
+        Args:
+            output_file (str): Path to the output file.
+        """
+
+        self.update_gee_state()
+
+        output_ext = os.path.splitext(output_file)[1]
+        assert output_ext in ['.csv'], 'Output file should be a .csv file.'
+
+        assert len(self.gee_assets) > 0, 'No assets to download.'
+
+        tempdir = tempfile.TemporaryDirectory()
+        for i, assetData in enumerate(self.gee_assets):
+            temp_file = os.path.join(
+                tempdir.name, f'{os.path.basename(assetData["name"])}.csv')
+
+            if os.path.exists(temp_file) and not overwrite:
+                continue
+            else:
+                asset = ee.FeatureCollection(assetData['name'])
+
+                if not silent:
+                    print(
+                        f'\rDownloading {os.path.basename(assetData["name"])} ({i+1}/{len(self.gee_assets)})', end=" ")
+
+                # Télécharger l'asset
+                urlretrieve(asset.getDownloadUrl(), temp_file)
+
+                # Nettoyer les champs et supprimer les géométries pour alléger la sortie
+                df = pd.read_csv(temp_file, index_col=None, header=0)
+                df = df.drop(['system:index', '.geo'], axis=1)
+                df.to_csv(temp_file)
+
+        # Concaténer les fichiers temporaires
+        if not silent:
+            print(f'\rConcatenating downloaded files', end=" ")
+
+        output_dfs = []
+        for filename in os.listdir(tempdir.name):
+            df = pd.read_csv(os.path.join(
+                tempdir.name, filename), index_col=None, header=0)
+            output_dfs.append(df)
+
+        df = pd.concat(output_dfs, axis=0, ignore_index=True)
+        df.to_csv(output_file)
+
+def uploadDGOs(dgo_shapefile_path, simplify_tolerance=15, ee_project_name='ee-glourb'):
+    raise DeprecationWarning('This function is deprecated. Use ExtractionZones.upload_to_gee() method instead.')
 
 def downloadMetrics(metrics, output_file, ee_project_name='ee-glourb'):
-    # Calculer l'asset
-    assetName = f'{os.path.splitext(os.path.basename(output_file))[0]}_{uuid.uuid4().hex}'
-    assetId = f'projects/{ee_project_name}/assets/metrics/{assetName}'
-    if not uploadAsset(metrics, 'Metrics uploaded from glourbee notebook', assetId):
-        return #TODO: replace by raise error
-    else:
-        # Recharger l'asset
-        asset = ee.FeatureCollection(assetId)
-
-        # Nettoyer les champs et supprimer les géométries pour alléger la sortie
-        cleaned = asset.select(propertySelectors=[
-                                    'DATE',
-                                    'AC_AREA',
-                                    'CLOUD_SCORE',
-                                    'COVERAGE_SCORE',
-                                    'DATE_ACQUIRED',
-                                    'ZONE_FID',
-                                    'MEAN_AC_MNDWI',
-                                    'MEAN_AC_NDVI',
-                                    'MEAN_MNDWI',
-                                    'MEAN_NDVI',
-                                    'MEAN_VEGETATION_MNDWI',
-                                    'MEAN_VEGETATION_NDVI',
-                                    'MEAN_WATER_MNDWI',
-                                    'VEGETATION_AREA',
-                                    'VEGETATION_PERIMETER',
-                                    'WATER_AREA',
-                                    'WATER_PERIMETER'],
-                                retainGeometry=False)
-
-        # Télécharger le csv
-        urlretrieve(cleaned.getDownloadURL(), output_file)
+    raise DeprecationWarning('This function is deprecated. Use MetricsDataset.download() method instead.')

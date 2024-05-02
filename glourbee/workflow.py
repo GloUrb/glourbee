@@ -15,24 +15,22 @@ from glourbee import (
     classification,
     data_management,
     zones_indicators,
-    zones_metrics
+    zones_metrics,
+    assets_management
 )
 
 tempdir = tempfile.mkdtemp(prefix='glourbee_')
 
-def startWorkflow(zones_asset: str,
-                  ee_project_name: str = 'ee-glourb',
+def startWorkflow(zones_dataset: assets_management.ExtractionZones,
                   satellite_type: str = 'Landsat',
                   start: str = '1980-01-01',
                   end: str = '2030-12-31',
                   cloud_filter: int = 80,
                   cloud_masking: bool = True,
                   mosaic_same_day: bool = True,
-                  split_size: int = None,
-                  fid_field= 'ZONE_FID',
-                  watermask_expression: str = 'MNDWI >  0.0',
-                  activechannel_expression: str = 'MNDWI > -0.4 && NDVI < 0.2',
-                  vegetation_expression: str = 'NDVI > 0.15'):
+                  watermask_expression: str = None,
+                  activechannel_expression: str = None,
+                  vegetation_expression: str = None):
     """
     Execute the classical GloUrbEE workflow for processing satellite imagery data for given extraction zones
 
@@ -59,38 +57,48 @@ def startWorkflow(zones_asset: str,
 
 
     assert satellite_type in ['Landsat', 'Sentinel-2'], ('Satellite dataset not correctly defined. Set satellite_type either to "Landsat" or "Sentinel-2"')
+    assert zones_dataset.gee_state == 'complete', ('Extraction zones dataset not completely uploaded to GEE. Please upload the dataset before starting the workflow.')
 
-    if split_size:
-        print('Warning: split_size is deprecated and will be removed in future versions. All ZONEs are now processed in parallel.')
+    metrics_ds = assets_management.MetricsDataset(ee_project_name=zones_dataset.ee_project_name, 
+                                                  parent_zones=zones_dataset)
+    
+    if not vegetation_expression:
+        vegetation_expression = 'NDVI > 0.15'
 
-    zones_features = ee.FeatureCollection(zones_asset)
-
-    zone_fids = zones_features.aggregate_array(fid_field).getInfo()
-    workflow_id = uuid.uuid4().hex
-
-    for i, sub in enumerate(zone_fids):
+    for i, assetData in enumerate(zones_dataset.gee_assets):
         i+=1
-        zone_subset = zones_features.filter(ee.Filter.inList(fid_field, sub.tolist()))
+        assetName = assetData['name']
+        asset = ee.FeatureCollection(assetName)
         
         if satellite_type == 'Landsat':
             scale = 30
+            if not watermask_expression:
+                watermask_expression = 'MNDWI >  0.0'
+            if not activechannel_expression:
+                activechannel_expression = 'MNDWI > -0.4 && NDVI < 0.2'
+
             # Get the landsat image collection for your ROI
             collection = data_management.getLandsatCollection(start=ee.Date(start), 
                                                               end=ee.Date(end), 
                                                               cloud_filter=cloud_filter, # Maximum cloud coverage accepted (%)
                                                               cloud_masking=cloud_masking, # Set to False if you don't want to mask the clouds on accepted images
                                                               mosaic_same_day=mosaic_same_day, # Set to False if you don't want to merge all images by day
-                                                              roi=zone_subset.union(1)) 
+                                                              roi=asset) 
 
         elif satellite_type == 'Sentinel-2':
             scale = 10
+            if not watermask_expression:
+                watermask_expression = 'NDWI > -0.1'
+            if not activechannel_expression:
+                activechannel_expression = 'NDWI > -0.4 && NDVI < 0.2'
+
             # Get the Sentinel-2 image collection for your ROI
             collection = data_management.getSentinelCollection(start=ee.Date(start), 
                                                               end=ee.Date(end), 
                                                               cloud_filter=cloud_filter, # Maximum cloud coverage accepted (%)
                                                               cloud_masking=cloud_masking, # Set to False if you don't want to mask the clouds on accepted images
                                                               mosaic_same_day=mosaic_same_day, # Set to False if you don't want to merge all images by day
-                                                              roi=zone_subset.union(1)) 
+                                                              roi=asset) 
 
         # Calculate MNDWI, NDVI and NDWI
         collection = classification.calculateIndicators(collection)
@@ -102,22 +110,13 @@ def startWorkflow(zones_asset: str,
                                                     vegetation_expression=vegetation_expression)
 
         # Metrics calculation
-        metrics = zones_metrics.calculateZONEsMetrics(collection=collection, zones=zone_subset, scale=scale)
+        metrics = zones_metrics.calculateZONEsMetrics(collection=collection, zones=asset, scale=scale)
 
-        # Create computation task
-        assetName = f'{workflow_id}_{i}'
-        assetId = f'projects/{ee_project_name}/assets/metrics/tmp/{assetName}'
-
-        task = ee.batch.Export.table.toAsset(
-            collection=metrics,
-            description=f'ZONE {i}-{len(zone_fids)} metrics for run {workflow_id}',
-            assetId=assetId
-        )
-        task.start()
-
-        print(f'\rZONE {i}/{len(zone_fids)} metrics queued', end=" ")
+        # Update the metrics dataset
+        fid = assetName.split('_')[-1]
+        metrics_ds.compute_zone_metrics(fid=fid, metrics=metrics)
     
-    return workflow_id
+    return metrics_ds
 
 
 def workflowState(run_id):
@@ -192,8 +191,9 @@ def cleanAssets(run_id, ee_project_name):
         ee.data.deleteAsset(asset)
 
 
-def indicatorsWorkflow(zones_asset, output_csv):
-    metrics = zones_indicators.calculateGSWindicators(zones_asset)
+def indicatorsWorkflow(extraction_zones, output_csv):
+    fc = ee.FeatureCollection([ee.Feature(ee.FeatureCollection(asset['id']).first()) for asset in extraction_zones.gee_assets])
+    metrics = zones_indicators.calculateGSWindicators(fc)
     
     temp_metrics = os.path.join(tempdir, 'gsw_metrics_output.csv')
     urlretrieve(metrics.getDownloadUrl(), temp_metrics)

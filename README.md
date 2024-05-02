@@ -73,6 +73,24 @@ If you want the database to be persistent, you can mount /app/ui/lib/db/glourbee
 | WATER_POLYGONS_p* | Percentiles of the water patches size (in pixels) inside the ZONE |
 | WATER_PERIMETER | Water surface perimeter (projection unit) |
 
+### How the masks are extracted
+To extract the water, active channel and vegetation masks, the following expressions are proposed as default parameters depending of the selected imagery.
+You can define custom ones using the `workflow.startWorflow()` `watermask_expression`, `activechannel_expression` and `vegetation_expression` parameters. The available layers for expressions are:`BLUE`,`GREEN`,`RED`,`NIR`,`SWIR1`,`SWIR2`,`MNDWI`,`NDWI`,`NDVI`.
+
+##### Landsat imagery default masks
+```py
+watermask_expression = 'MNDWI > 0.0'
+activechannel_expression = 'MNDWI > -0.4 && NDVI < 0.2'
+vegetation_expression = 'NDVI > 0.15'
+```
+
+##### Sentinel-2 imagery default masks
+```py
+watermask_expression = 'NDWI > -0.1'
+activechannel_expression = 'NDWI > -0.4 && NDVI < 0.2'
+vegetation_expression = 'NDVI > 0.15'
+```
+
 ## Indicators
 | indicator name | description |   
 |---|---|

@@ -27,7 +27,7 @@ def calculateNDWI(image):
 
 def calculateIndicators(collection):
     '''
-    Documentation
+    Calculate the MNDWI, NDVI and NDWI for each image in the collection.
     '''
 
     collection = collection.map(calculateMNDWI).map(
