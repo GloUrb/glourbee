@@ -138,7 +138,7 @@ class ExtractionZones(GlourbEEDataset):
                  asset_uuid: str = None,
                  fid_field: str = 'DGO_FID',
                  zone_type: str = 'DGOs',
-                 descritpion: str = None,
+                 description: str = None,
                  author: str = None):
         
         super().__init__(ee_project_name, asset_uuid)
@@ -156,7 +156,7 @@ class ExtractionZones(GlourbEEDataset):
             self.name = self.config['features'][0]['properties']['name']
             self.fid_field = self.config['features'][0]['properties']['fid_field']
             self.type = self.config['features'][0]['properties']['type']
-            self.descritpion = self.config['features'][0]['properties']['descritpion']
+            self.description = self.config['features'][0]['properties']['description']
             self.zones_author = self.config['features'][0]['properties']['zones_author']
         else:
             # Vérifier que le champ FID existe
@@ -168,7 +168,7 @@ class ExtractionZones(GlourbEEDataset):
             self.name = os.path.splitext(os.path.basename(self.local_file))[0]
             self.len = len(gdf)
             self.type = zone_type
-            self.descritpion = descritpion
+            self.description = description
             self.zones_author = author
 
         # Récupérer les infos sur le dossier GEE
@@ -206,7 +206,7 @@ class ExtractionZones(GlourbEEDataset):
                 'len': 'Integer',
                 'name': 'String',
                 'type': 'String',
-                'descritpion': 'String',
+                'description': 'String',
                 'zones_author': 'String', 
                 },
             'features': [
@@ -218,7 +218,7 @@ class ExtractionZones(GlourbEEDataset):
                         'len': self.len,
                         'name': self.name,
                         'type': self.type,
-                        'descritpion': self.descritpion,
+                        'description': self.description,
                         'zones_author': self.zones_author,
                     },
                     'geometry': {
