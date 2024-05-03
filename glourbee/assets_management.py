@@ -137,7 +137,9 @@ class ExtractionZones(GlourbEEDataset):
                  ee_project_name: str = 'ee-glourb', 
                  asset_uuid: str = None,
                  fid_field: str = 'DGO_FID',
-                 zone_type: str = 'DGOs'):
+                 zone_type: str = 'DGOs',
+                 descritpion: str = None,
+                 author: str = None):
         
         super().__init__(ee_project_name, asset_uuid)
 
@@ -154,6 +156,8 @@ class ExtractionZones(GlourbEEDataset):
             self.name = self.config['features'][0]['properties']['name']
             self.fid_field = self.config['features'][0]['properties']['fid_field']
             self.type = self.config['features'][0]['properties']['type']
+            self.descritpion = self.config['features'][0]['properties']['descritpion']
+            self.zones_author = self.config['features'][0]['properties']['zones_author']
         else:
             # Vérifier que le champ FID existe
             gdf = gpd.read_file(self.local_file)
@@ -164,6 +168,8 @@ class ExtractionZones(GlourbEEDataset):
             self.name = os.path.splitext(os.path.basename(self.local_file))[0]
             self.len = len(gdf)
             self.type = zone_type
+            self.descritpion = descritpion
+            self.zones_author = author
 
         # Récupérer les infos sur le dossier GEE
         self.gee_dir = f'projects/{self.ee_project_name}/assets/extraction_zones/{self.asset_uuid}'
@@ -200,6 +206,8 @@ class ExtractionZones(GlourbEEDataset):
                 'len': 'Integer',
                 'name': 'String',
                 'type': 'String',
+                'descritpion': 'String',
+                'zones_author': 'String', 
                 },
             'features': [
                 {
@@ -209,7 +217,9 @@ class ExtractionZones(GlourbEEDataset):
                         'fid_field': self.fid_field,
                         'len': self.len,
                         'name': self.name,
-                        'type': self.type
+                        'type': self.type,
+                        'descritpion': self.descritpion,
+                        'zones_author': self.zones_author,
                     },
                     'geometry': {
                         'type': 'Polygon',
