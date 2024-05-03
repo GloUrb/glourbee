@@ -114,7 +114,19 @@ def startWorkflow(zones_dataset: assets_management.ExtractionZones,
 
         # Update the metrics dataset
         fid = assetName.split('_')[-1]
-        metrics_ds.compute_zone_metrics(fid=fid, metrics=metrics)
+        metrics_ds.compute_zone_metrics(fid=fid, 
+                                        metrics=metrics,
+                                        params={                
+                                            'satellite_type': satellite_type,
+                                            'start': start,
+                                            'end': end,
+                                            'cloud_filter': cloud_filter,
+                                            'cloud_masking': cloud_masking,
+                                            'mosaic_same_day': mosaic_same_day,
+                                            'watermask_expression': watermask_expression,
+                                            'activechannel_expression': activechannel_expression,
+                                            'vegetation_expression': vegetation_expression
+                                            })
     
     return metrics_ds
 
