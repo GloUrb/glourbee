@@ -29,8 +29,6 @@ class GlourbEEDataset:
         self.gee_assets = []
         self.config = None
 
-        self.gee_dir = f'projects/{self.ee_project_name}/assets/extraction_zones/{asset_uuid}'
-
         self.asset_uuid = asset_uuid
         if not asset_uuid:
             self.asset_uuid = uuid.uuid4().hex
@@ -129,11 +127,12 @@ class GlourbEEDataset:
                 ee.data.deleteAsset(child['name'])
 
         ee.data.deleteAsset(self.gee_dir)
+        self.config = None
 
 
 class ExtractionZones(GlourbEEDataset):
     def __init__(self, 
-                 local_file: str,
+                 local_file: str = None,
                  ee_project_name: str = 'ee-glourb', 
                  asset_uuid: str = None,
                  fid_field: str = 'DGO_FID',
@@ -141,13 +140,14 @@ class ExtractionZones(GlourbEEDataset):
                  description: str = None,
                  author: str = None):
         
+        self.gee_dir = f'projects/{ee_project_name}/assets/extraction_zones/{asset_uuid}'
         super().__init__(ee_project_name, asset_uuid)
 
         self.child_metrics = []
 
         # Vérifier que le fichier local existe ou que l'asset est déjà sur GEE
         self.local_file = local_file
-        assert os.path.exists(self.local_file) or self.config, f'Local file must exist or asset should be already uploaded to GEE project.'
+        assert os.path.exists(str(self.local_file)) or self.config, f'Local file must exist or asset should be already uploaded to GEE project.'
         
         # Récupérer les paramètres
         if self.config:
@@ -155,9 +155,9 @@ class ExtractionZones(GlourbEEDataset):
             self.len = self.config['features'][0]['properties']['len']
             self.name = self.config['features'][0]['properties']['name']
             self.fid_field = self.config['features'][0]['properties']['fid_field']
-            self.type = self.config['features'][0]['properties']['type']
-            self.description = self.config['features'][0]['properties']['description']
-            self.zones_author = self.config['features'][0]['properties']['zones_author']
+            self.type = self.config['features'][0]['properties']['type'] if 'type' in self.config['features'][0]['properties'] else None
+            self.description = self.config['features'][0]['properties']['description'] if 'description' in self.config['features'][0]['properties'] else None
+            self.zones_author = self.config['features'][0]['properties']['zones_author'] if 'zones_author' in self.config['features'][0]['properties'] else None
         else:
             # Vérifier que le champ FID existe
             gdf = gpd.read_file(self.local_file)
@@ -194,9 +194,10 @@ class ExtractionZones(GlourbEEDataset):
         # Ouvrir le fichier local
         gdf = gpd.read_file(self.local_file)
         gdf['geometry'] = gdf.simplify(simplify_tolerance)
+        centroid = gdf.dissolve().centroid
+        
         gdf.to_crs(4326, inplace=True)
-
-        extent = gdf.dissolve()
+        centroid = centroid.to_crs(4326)
 
         # Mise à jour de la config
         self.config = {
@@ -222,8 +223,8 @@ class ExtractionZones(GlourbEEDataset):
                         'zones_author': self.zones_author,
                     },
                     'geometry': {
-                        'type': 'Polygon',
-                        'coordinates': [list(extent['geometry'][0].exterior.coords)]
+                        'type': 'Point',
+                        'coordinates': [centroid.x[0], centroid.y[0]],
                     },
                 }
             ]
@@ -260,12 +261,18 @@ class MetricsDataset(GlourbEEDataset):
     def __init__(self, 
                  ee_project_name: str = 'ee-glourb', 
                  asset_uuid: str = None,
-                 parent_zones: ExtractionZones = None):
-        super().__init__(ee_project_name, asset_uuid)
+                 parent_zones = None):
+        
+        assert isinstance(parent_zones, (ExtractionZones, str)), 'Parent zones should be provided as glourbee ExtractionZones or uuid.'
 
-        assert parent_zones, 'Parent extraction zones should be provided.'
+        if isinstance(parent_zones, str):
+            self.gee_dir = f'projects/{ee_project_name}/assets/extraction_zones/{parent_zones}/{asset_uuid}'
+            self.parent_zones = ExtractionZones(asset_uuid=parent_zones)
+            super().__init__(ee_project_name, asset_uuid)
+        else:
+            self.gee_dir = f'projects/{self.ee_project_name}/assets/extraction_zones/{parent_zones.asset_uuid}/{asset_uuid}'
+            super().__init__(ee_project_name, asset_uuid)
 
-        self.parent_zones = parent_zones
         self.len = self.parent_zones.len
 
         self.name = f'{self.parent_zones.name}_{datetime.now().strftime("%Y%m%d_%H%M%S")}'
@@ -297,8 +304,10 @@ class MetricsDataset(GlourbEEDataset):
                 'watermask_expression': 'String',
                 'activechannel_expression': 'String',
                 'vegetation_expression': 'String',
+                'parent_uuid': 'String',
                })
             self.config['features'][0]['properties'].update({
+                'name': self.name,
                 'satellite_type': params['satellite_type'],
                 'start': params['start'],
                 'end': params['end'],
@@ -308,6 +317,7 @@ class MetricsDataset(GlourbEEDataset):
                 'watermask_expression': params['watermask_expression'],
                 'activechannel_expression': params['activechannel_expression'],
                 'vegetation_expression': params['vegetation_expression'],
+                'parent_uuid': self.parent_zones.asset_uuid,
             })
 
             task = ee.batch.Export.table.toAsset(
