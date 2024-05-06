@@ -7,6 +7,7 @@ import ee.batch
 import pandas as pd
 import geopandas as gpd
 
+from typing import Union
 from urllib.request import urlretrieve
 from time import sleep
 from datetime import datetime
@@ -261,16 +262,15 @@ class MetricsDataset(GlourbEEDataset):
     def __init__(self, 
                  ee_project_name: str = 'ee-glourb', 
                  asset_uuid: str = None,
-                 parent_zones = None):
-        
-        assert isinstance(parent_zones, (ExtractionZones, str)), 'Parent zones should be provided as glourbee ExtractionZones or uuid.'
+                 parent_zones: Union[str, ExtractionZones] = None):
 
         if isinstance(parent_zones, str):
             self.gee_dir = f'projects/{ee_project_name}/assets/extraction_zones/{parent_zones}/{asset_uuid}'
             self.parent_zones = ExtractionZones(asset_uuid=parent_zones)
             super().__init__(ee_project_name, asset_uuid)
         else:
-            self.gee_dir = f'projects/{self.ee_project_name}/assets/extraction_zones/{parent_zones.asset_uuid}/{asset_uuid}'
+            self.parent_zones = parent_zones
+            self.gee_dir = f'projects/{ee_project_name}/assets/extraction_zones/{parent_zones.asset_uuid}/{asset_uuid}'
             super().__init__(ee_project_name, asset_uuid)
 
         self.len = self.parent_zones.len
