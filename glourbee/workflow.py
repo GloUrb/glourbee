@@ -1,15 +1,10 @@
 import ee
 import os
-import uuid
-import numpy as np
 import pandas as pd
-from urllib.request import urlretrieve
-from urllib.error import HTTPError
+from urllib.request import urlretrieve, urlopen
+from io import StringIO
 
 import tempfile
-
-from urllib.request import urlretrieve
-from urllib.error import HTTPError
 
 from glourbee import (
     classification,
@@ -204,12 +199,14 @@ def cleanAssets(run_id, ee_project_name):
 
 
 def indicatorsWorkflow(extraction_zones, output_csv):
-    fc = ee.FeatureCollection([ee.Feature(ee.FeatureCollection(asset['id']).first()) for asset in extraction_zones.gee_assets])
-    metrics = zones_indicators.calculateGSWindicators(fc)
-    
-    temp_metrics = os.path.join(tempdir, 'gsw_metrics_output.csv')
-    urlretrieve(metrics.getDownloadUrl(), temp_metrics)
 
-    df = pd.read_csv(temp_metrics)
+    indics = []
+
+    for asset in [ee.FeatureCollection(asset['id']) for asset in extraction_zones.gee_assets]:
+        unit_indics = zones_indicators.calculateGSWindicators(asset)
+        unit_df = pd.read_csv(StringIO(urlopen(unit_indics.getDownloadUrl()).read().decode('utf-8')))
+        indics.append(unit_df)
+        
+    df = pd.concat(indics)
     df.drop(['system:index', '.geo'], axis=1, inplace=True)
     df.to_csv(output_csv)
