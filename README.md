@@ -109,3 +109,8 @@ Many thanks to:
 - [Julie Limonet](https://github.com/Julielmnt) for the UI skeleton
 - [Leo Helling](https://github.com/jlhelling) for the Sentinel-2 integration
 - [Samuel Dunesme](https://github.com/sdunesme)
+
+# Citation 
+[![DOI](https://zenodo.org/badge/578546372.svg)](https://zenodo.org/doi/10.5281/zenodo.11235572)
+
+Dunesme, S., Belletti, B., Helling, L., & Limonet, J. (2024). EVS-GIS/glourbee. UMR5600 Environnement, Ville, Société. https://doi.org/10.5281/zenodo.11235572
