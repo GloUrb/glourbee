@@ -11,22 +11,34 @@ from glourbee import ui
 ui.addHeader('Manage metrics')
 if not st.session_state['authenticated']: 
     st.switch_page('pages/01_🕶️_Authentication.py')
-if 'extraction_zones' not in st.session_state or not st.session_state['extraction_zones']['tableId']: 
+if 'extraction_zones' not in st.session_state or st.session_state['extraction_zones'] is None: 
     st.switch_page('pages/02_🌍_Manage_extraction_zones.py')
 
 from glourbee import (
     workflow,
-    __version__ as glourbee_version,
+    collection,
+    assets_management
 )
-
-if 'metrics' not in st.session_state:
-    st.session_state['metrics'] = None
 
 st.title('Select a metrics dataset')
 
-assets = st.session_state['db'].query('select * from glourbmetrics where zones_asset = :zone_id', 
-                                        ttl=0, 
-                                        params={'zone_id': int(st.session_state['extraction_zones']['tableId'])})
+if 'metrics_info' not in st.session_state or st.session_state['metrics_info'] is None:
+    st.session_state.metrics = collection.getGlourbeeMetrics(zones_uuid=st.session_state['extraction_zones']['asset_uuid'])
+
+select_ds = st.dataframe(
+    st.session_state.metrics,
+    key="asset_uuid",
+    on_select="rerun",
+    selection_mode="single-row",
+)
+
+if len(select_ds.selection.rows) == 1:
+    st.session_state['metrics_info'] = st.session_state.metrics.iloc[select_ds.selection.rows[0]]
+    st.session_state['metrics_dataset'] = assets_management.MetricsDataset(asset_uuid=st.session_state['metrics_info']['asset_uuid'], parent_zones=st.session_state['extraction_zones']['asset_uuid'])
+else:
+    st.session_state['metrics_info'] = None
+    st.session_state['metrics_dataset'] = None
+
 
 if len(assets) >= 1:
     st.write('Check the already calculated metric datasets for your selected extraction zones. Check your task manager to update the tasks state.')

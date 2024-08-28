@@ -7,9 +7,6 @@ import ee
 import os
 import geemap.foliumap as geemap
 
-from ee.ee_exception import EEException
-
-from sqlalchemy.sql import text
 from glourbee import (
     ui,
     assets_management,
@@ -39,6 +36,10 @@ if len(select_zones.selection.rows) == 1:
         asset_uuid=st.session_state['extraction_zones']['asset_uuid'])
 else:
     st.session_state['extraction_zones'] = None
+
+    if 'metrics_info' in st.session_state:
+        st.session_state['metrics_info'] = None
+        st.session_state['metrics_dataset'] = None
 
 if "extraction_zones" in st.session_state and st.session_state['extraction_zones'] is not None:
     st.success(

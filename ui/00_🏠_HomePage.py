@@ -6,7 +6,6 @@
 # -*- coding: utf-8 -*-
 
 import streamlit as st
-import os
 import tempfile
 from pathlib import Path
 from glourbee import ui
