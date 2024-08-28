@@ -195,10 +195,8 @@ class ExtractionZones(GlourbEEDataset):
         # Ouvrir le fichier local
         gdf = gpd.read_file(self.local_file)
         gdf['geometry'] = gdf.simplify(simplify_tolerance)
-        centroid = gdf.dissolve().centroid
         
         gdf.to_crs(4326, inplace=True)
-        centroid = centroid.to_crs(4326)
 
         # Mise à jour de la config
         self.config = {
@@ -225,7 +223,7 @@ class ExtractionZones(GlourbEEDataset):
                     },
                     'geometry': {
                         'type': 'Point',
-                        'coordinates': [centroid.x[0], centroid.y[0]],
+                        'coordinates': [0,0],
                     },
                 }
             ]
