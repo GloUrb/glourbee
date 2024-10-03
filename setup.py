@@ -19,6 +19,7 @@ setup(
         'streamlit>=1.35.0',
         'streamlit-folium',
         'sqlalchemy',
-        'alembic'
+        'alembic',
+        'debugpy',
     ],
 )

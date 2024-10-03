@@ -1,0 +1,13 @@
+services:
+  app:
+    image: ghcr.io/evs-gis/glourbee-ui:1.1.0
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    command: ["sh", "-c", "python -m debugpy --wait-for-client --listen 0.0.0.0:5678 -m streamlit run ui/00_🏠_HomePage.py --server.port=8501 --server.address=0.0.0.0"]
+    ports:
+      - "8501:8501"
+      - "5678:5678"
+    volumes:
+      - ./ui:/app/ui:ro
+      - ./glourbee:/app/glourbee:ro
