@@ -21,13 +21,26 @@ if not st.session_state['authenticated']:
 st.title('Select GloUrbEE extraction zones')
 
 if "assets" not in st.session_state:
-    st.session_state.assets = collection.getGlourbeeExtractionZones()
+    with st.spinner('Loading assets from Earth Engine...'):
+        st.session_state.assets = collection.getGlourbeeExtractionZones()
+
 
 select_zones = st.dataframe(
     st.session_state.assets,
     key="asset_uuid",
     on_select="rerun",
     selection_mode="single-row",
+    hide_index=True,
+    column_config={
+        "asset_uuid": "UUID",
+        "metrics_ds": "Number of metrics datasets",
+        "zones_author": "Author",
+        "description": "Description",
+        "len": "Number of polygons",
+        "name": "Name",
+        "fid_field": "Unique identifier field",
+        "type": "Type",
+    }
 )
 
 if len(select_zones.selection.rows) == 1:
@@ -66,8 +79,7 @@ if "extraction_zones" in st.session_state and st.session_state['extraction_zones
             asset['id']).first()) for asset in st.session_state['zones_dataset'].gee_assets])
 
         map = geemap.Map()
-        map.addLayer(st.session_state['extraction_zones']
-                     ['features'], name='Extraction Zones')
+        map.addLayer(st.session_state['extraction_zones']['features'], name='Extraction Zones')
         map.center_object(st.session_state['extraction_zones']['features'])
         map.add_labels(
             st.session_state['extraction_zones']['features'],

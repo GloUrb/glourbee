@@ -7,6 +7,7 @@ from packaging import version
 from sqlalchemy.sql import text
 
 from glourbee import ui
+from glourbee import __version__ as glourbee_version
 
 ui.addHeader('Manage metrics')
 if not st.session_state['authenticated']: 
@@ -23,65 +24,47 @@ from glourbee import (
 st.title('Select a metrics dataset')
 
 if 'metrics_info' not in st.session_state or st.session_state['metrics_info'] is None:
-    st.session_state.metrics = collection.getGlourbeeMetrics(zones_uuid=st.session_state['extraction_zones']['asset_uuid'])
-
-select_ds = st.dataframe(
-    st.session_state.metrics,
-    key="asset_uuid",
-    on_select="rerun",
-    selection_mode="single-row",
-)
-
-if len(select_ds.selection.rows) == 1:
-    st.session_state['metrics_info'] = st.session_state.metrics.iloc[select_ds.selection.rows[0]]
-    st.session_state['metrics_dataset'] = assets_management.MetricsDataset(asset_uuid=st.session_state['metrics_info']['asset_uuid'], parent_zones=st.session_state['extraction_zones']['asset_uuid'])
-else:
-    st.session_state['metrics_info'] = None
-    st.session_state['metrics_dataset'] = None
+    with st.spinner('Loading metrics assets from Earth Engine...'):
+        st.session_state.metrics = collection.getGlourbeeMetrics(zones_uuid=st.session_state['extraction_zones']['asset_uuid'])
 
 
-if len(assets) >= 1:
+if len(st.session_state.metrics) >= 1:
     st.write('Check the already calculated metric datasets for your selected extraction zones. Check your task manager to update the tasks state.')
     
-    def check_outdated(row):
-        return version.parse(row['glourbee_version']) < version.parse(str(glourbee_version))
+    select_ds = st.dataframe(
+        st.session_state.metrics,
+        key="asset_uuid",
+        on_select="rerun",
+        selection_mode="single-row",
+    )
 
-    assets['outdated'] = assets.apply(check_outdated, axis=1)
-
-    if not st.session_state['metrics']:
-        selection = ui.select_metrics(assets)
-
-        if len(selection) == 1:
-            st.session_state['metrics'] = selection['run_id'].iloc[0]
-            st.rerun()
-
+    if len(select_ds.selection.rows) == 1:
+        with st.spinner('Loading metrics dataset...'):
+            st.session_state['metrics_info'] = st.session_state.metrics.iloc[select_ds.selection.rows[0]]
+            st.session_state['metrics_dataset'] = assets_management.MetricsDataset(asset_uuid=st.session_state['metrics_info']['asset_uuid'], parent_zones=st.session_state['extraction_zones']['asset_uuid'])
     else:
-        st.success(f'Selected metrics dataset: {st.session_state["metrics"]}')
+        st.session_state['metrics_info'] = None
+        st.session_state['metrics_dataset'] = None
+
+if st.session_state['metrics_info'] is not None:
+    if st.button('Download metrics dataset'):
         local_csv = os.path.join(st.session_state['tempdir'].name, 'metrics.csv')
+        with st.spinner('Downloading metrics dataset...'):
+            st.session_state['metrics_dataset'].download(local_csv)
+        with open(local_csv) as f:
+            st.download_button('Download metrics CSV', f, 'text/csv')
 
-        if st.button('Unselect metrics dataset'):
-            st.session_state['metrics'] = None
-            if os.path.exists(local_csv):
-                os.remove(local_csv)
-            st.rerun()
-
-        if st.button('Prepare dataset', help='Download the dataset from GEE to the GloUrbEE-UI server so you can visualize the metrics in the visualizer.'):
-            with st.spinner('Preparing results...'):
-                workflow.getResults(run_id = st.session_state['metrics'],
-                                    ee_project_name= 'ee-glourb',
-                                    output_csv = local_csv)
-        
-        if os.path.exists(local_csv):
-            with open(local_csv) as f:
-                st.download_button('Download metrics CSV', f, 'text/csv', help="Download the metrics dataset to your local computer")
-
+    # if st.button('Delete metrics dataset'):
+    #     with st.spinner('Deleting metrics dataset...'):
+    #         st.session_state['metrics_dataset'].delete()
+    #     st.session_state['metrics_info'] = None
+    #     st.session_state['metrics_dataset'] = None
+                         
 else:
     st.warning('No metrics already calculated for this extraction zones asset')
 
-st.title('Start a new metrics dataset computation')
 
-def checkExistingMetrics():
-    st.info('Test')
+st.title('Start a new metrics dataset computation')
 
 with st.form('calulate_metrics'):
     col1, col2 = st.columns(2)
