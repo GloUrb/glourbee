@@ -30,7 +30,7 @@ if st.button("Authenticate with JSON key"):
             ee.Initialize(credentials)
 
             try:
-                ee.data.listAssets({'parent': 'projects/ee-glourb/assets/zones'})
+                ee.data.listAssets({'parent': 'projects/ee-glourb/assets/extraction_zones'})
             
                 st.session_state['mail'] = json.loads(bytes_data)['client_email']
                 st.session_state['user'] = st.session_state['mail'].split("@")[0]
@@ -40,7 +40,7 @@ if st.button("Authenticate with JSON key"):
                 st.success(f"Authenticated as **{st.session_state['user']}**", icon="🕶️")
 
             except ee.EEException as e:
-                st.error("Your account have no access to the ee-glourb Earth Engine project", icon="🚨")
+                st.error(f"Your account have no access to the ee-glourb Earth Engine project: {e}", icon="🚨")
 
         except ee.EEException as e:
             st.error("Authentication failed", icon="🚨")

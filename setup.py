@@ -16,9 +16,10 @@ setup(
         # 'ipython',
         # 'ipykernel',
         # 'ipyleaflet==0.16',
-        'streamlit>=1.30.0',
+        'streamlit>=1.35.0',
         'streamlit-folium',
         'sqlalchemy',
-        'alembic'
+        'alembic',
+        'debugpy',
     ],
 )

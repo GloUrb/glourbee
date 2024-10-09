@@ -6,13 +6,10 @@
 # -*- coding: utf-8 -*-
 
 import streamlit as st
-import os
 import tempfile
 from pathlib import Path
 from glourbee import ui
 
-if 'db' not in st.session_state:
-    st.session_state['db'] = st.connection('glourbee-db', type='sql', url="sqlite:///ui/lib/db/glourbee-ui.db")
 if 'tempdir' not in st.session_state:
     st.session_state['tempdir'] = tempfile.TemporaryDirectory()
 if "authenticated" not in st.session_state:
