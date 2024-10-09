@@ -43,10 +43,10 @@ streamlit run ui/00_🏠_HomePage.py
 ## With docker
 
 ```bash
-docker run -v /data/glourbee-ui.db:/app/ui/li/db/glourbee-ui.db ghcr.io/evs-gis/glourbee-ui:latest 
+docker run --expose 8501 ghcr.io/evs-gis/glourbee-ui:latest 
 ```
 
-If you want the database to be persistent, you can mount /app/ui/lib/db/glourbee-ui.db in a docker volume.
+The application should be available at http://localhost:8501
 
 # Data extracted
 ## Metrics
