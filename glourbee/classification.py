@@ -24,6 +24,16 @@ def calculateNDWI(image):
 
     return image.addBands(output_img)
 
+def calculateBSI(image):
+    # Calculer l'image de BSI
+    output_img = image.expression('((SWIR1 + RED) - (NIR + BLUE)) / ((SWIR1 + RED) + (NIR + BLUE))',
+                                        {'BLUE': image.select('blue'),
+                                        'RED': image.select('red'),
+                                        'SWIR1': image.select('swir1'),
+                                        'SWIR2': image.select('swir2'),}).rename('BSI')
+
+    return image.addBands(output_img)
+
 
 def calculateIndicators(collection):
     '''
@@ -31,7 +41,7 @@ def calculateIndicators(collection):
     '''
 
     collection = collection.map(calculateMNDWI).map(
-        calculateNDVI).map(calculateNDWI)
+        calculateNDVI).map(calculateNDWI).map(calculateBSI)
 
     return collection
 

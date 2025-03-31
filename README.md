@@ -61,6 +61,7 @@ The application should be available at http://localhost:8501
 | ~~MEAN_DRY_MNDWI~~ | ~~Mean MNDWI in the surface which is not water~~  |
 | MEAN_MNDWI | Mean MNDWI of the full ZONE |
 | MEAN_NDVI| Mean NDVI of the full ZONE |
+| MEAN_BSI | Mean BSI (Bare Soil Index) of the full zone |
 | MEAN_VEGETATION_MNDWI | Mean MNDWI in the vegetation surface |
 | MEAN_VEGETATION_NDVI | Mean NDVI in the vegetation surface |
 | MEAN_WATER_MNDWI | Mean MNDWI in the water surface |

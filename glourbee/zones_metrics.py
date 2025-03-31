@@ -98,6 +98,12 @@ def calculateWaterMetrics(image, zone, scale, simplify_tolerance=1.5):
                 geometry = zone.geometry(),
                 scale = scale
             ).getNumber('MNDWI'),
+
+        'MEAN_BSI': image.select('BSI').reduceRegion(
+                reducer = ee.Reducer.mean(),
+                geometry = zone.geometry(),
+                scale = scale
+            ).getNumber('BSI'),
     }))
     
     return results
