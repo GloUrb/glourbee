@@ -30,7 +30,8 @@ def calculateBSI(image):
                                         {'BLUE': image.select('blue'),
                                         'RED': image.select('red'),
                                         'SWIR1': image.select('swir1'),
-                                        'SWIR2': image.select('swir2'),}).rename('BSI')
+                                        'SWIR2': image.select('swir2'),
+                                        'NIR': image.select('nir')}).rename('BSI')
 
     return image.addBands(output_img)
 
