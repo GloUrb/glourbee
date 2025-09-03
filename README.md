@@ -31,13 +31,13 @@ The GloUrbEE-UI allow you to use the main GloUrbEE package workflow with a fancy
 - Windows
 ```powershell
 .\env\Scripts\activate
-streamlit run ui/00_🏠_HomePage.py
+streamlit run ui/app.py
 ```
 
 - Linux
 ```bash
 source env/bin/activate
-streamlit run ui/00_🏠_HomePage.py
+streamlit run ui/ui.py
 ```
 
 ## With docker

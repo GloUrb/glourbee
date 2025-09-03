@@ -141,7 +141,7 @@ def extractActiveChannel(activechannel_expression: str = 'MNDWI > -0.4 && NDVI <
 def classifyObjects(collection,
                     watermask_expression: str = 'MNDWI >  0.0',
                     activechannel_expression: str = 'MNDWI > -0.4 && NDVI < 0.2',
-                    vegetation_expression: str = 'NDVI > 0.15'):
+                    vegetation_expression: str = 'NDVI > 0.15') -> ee.imagecollection.ImageCollection:
 
     collection = collection.map(extractWater(watermask_expression)).map(extractVegetation(
         vegetation_expression)).map(extractActiveChannel(activechannel_expression))

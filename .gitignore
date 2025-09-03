@@ -131,6 +131,7 @@ dmypy.json
 
 # Earth Engine login key
 earthengine-key.json
+ee-glourb-*.json
 
 # Temp files
 example_data/*_gcs.*

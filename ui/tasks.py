@@ -2,32 +2,40 @@ import streamlit as st
 import ee
 import pandas as pd
 
-from sqlalchemy.sql import text
-from glourbee import ui
+from glourbee.worker import app
 
-ui.addHeader(title='GEE tasks manager')
+st.header("Tasks Manager")
 
-if not st.session_state['authenticated']: 
-    st.switch_page('pages/01_🕶️_Authentication.py')
+with st.spinner("Inspecting background workers"):
+    i = app.control.inspect()
+    active_tasks = i.active()
+    scheduled_tasks = i.scheduled()
+    reserved_tasks = i.reserved()
 
+st.title("Active tasks")
+st.write(active_tasks)
 
-tlist = pd.DataFrame(ee.data.getTaskList())
+st.title("Scheduled tasks")
+st.write(scheduled_tasks)
 
-st.dataframe(tlist, 
-             hide_index=True,
-             column_config={
-                 'creation_timestamp_ms': st.column_config.DatetimeColumn(
-                     "creation"
-                 ),
-                 'update_timestamp_ms': st.column_config.DatetimeColumn(
-                     "update"
-                 ),
-                 'start_timestamp_ms': st.column_config.DatetimeColumn(
-                     "start"
-                 ),
-             })
+st.title("Reserved tasks")
+st.write("Reserved tasks are tasks that have been received, but are still waiting to be executed.")
+st.write(reserved_tasks)
 
-st.info('Coming soon: ability to cancel tasks', icon='🙃')
+# tlist = pd.DataFrame(ee.data.getTaskList())
+# st.dataframe(tlist, 
+#              hide_index=True,
+#              column_config={
+#                  'creation_timestamp_ms': st.column_config.DatetimeColumn(
+#                      "creation"
+#                  ),
+#                  'update_timestamp_ms': st.column_config.DatetimeColumn(
+#                      "update"
+#                  ),
+#                  'start_timestamp_ms': st.column_config.DatetimeColumn(
+#                      "start"
+#                  ),
+#              })
 
 # # Mettre à jour l'état des taches lancées par l'utilisateur
 # db_tasks = st.session_state['db'].query('SELECT * FROM glourbmetrics WHERE run_by = :u AND state != \'COMPLETED\'',
