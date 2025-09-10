@@ -9,10 +9,13 @@ setup(
         'click',
         'numpy',
         'geopandas',
+        'rasterio',
+        'scikit-image',
         'earthengine-api',
         'pandas',
         'geemap',
         'geedim',
+        'cryptography',
         'geetools==0.6.14', # mosaicSameDay deprecated in 1.0.0 :(
         # 'ipython',
         # 'ipykernel',

@@ -14,6 +14,7 @@ RUN apt-get update && apt-get install -y \
 
 COPY ./ui ./ui
 COPY ./glourbee ./glourbee
+COPY ./filesender ./filesender
 COPY ./setup.py ./setup.py
 
 RUN pip3 install -U pip

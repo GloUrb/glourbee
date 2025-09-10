@@ -1,4 +1,11 @@
 import ee
+import rasterio as rio
+import os 
+import numpy as np
+
+from shapely import Polygon, MultiPolygon
+from rasterio.mask import mask
+from skimage import measure
 
 
 def calculateCloudScore(image, zone_shape, scale):
@@ -264,3 +271,61 @@ def calculateZONEsMetrics(collection, zones, scale=30):
     # Retourner uniquement les métriques (pas la Feature complète)
     return unnested
 
+
+def calculcateZONEsMetricsLocal(image_path: str, zone: MultiPolygon | Polygon) -> dict:
+
+    assert os.path.isfile(image_path), f'File {image_path} does not exists'
+
+    metrics = dict()
+    percentiles = range(0, 100, 10)
+
+    with rio.open(image_path) as src:
+        
+        for band_name in ['MNDWI', 'NDVI', 'NDWI', 'BSI', 'CLOUDS', 'WATER', 'VEGETATION', 'AC']:
+            assert band_name in src.descriptions
+
+        band_mapping = dict([(name, i) for i, name in zip(range(1,len(src.descriptions)+1), src.descriptions)])
+
+        for i in ['MNDWI', 'NDVI', 'NDWI', 'BSI']:
+            indic_image, _ = mask(src, [zone], crop=True, filled=True, nodata=-np.inf, indexes=band_mapping[i])
+            indic_image[np.where(indic_image==-np.inf)] = np.nan
+
+            metrics[f'{i}_MAX'] = float(np.nanmax(indic_image))
+            metrics[f'{i}_MEAN'] = float(np.nanmean(indic_image))
+            metrics[f'{i}_MIN'] = float(np.nanmin(indic_image))
+            metrics[f'{i}_STD'] = float(np.nanstd(indic_image))
+
+
+        for c in ['CLOUDS', 'WATER', 'VEGETATION', 'AC']:
+
+            image, _ = mask(src, [zone], crop=True, filled=True, nodata=-np.inf, indexes=band_mapping[c])
+            image[np.where(image==-np.inf)] = 255
+
+            labels = measure.label(image, background=255, connectivity=2).astype(np.uint8)
+            metrics[f'{c}_POLYGONS_COUNT'] = int(np.max(labels))
+
+            props = measure.regionprops_table(labels, properties=[                
+                'area',
+                'eccentricity',
+                'perimeter',
+                'solidity'
+            ])
+
+            metrics[f'{c}_AREA'] = np.sum(props['area'])
+
+            for prop in props.keys():
+                if len(props[prop]) > 0:
+                    for perc in percentiles:    
+                        metrics[f'{c}_POLYGONS_{prop.upper()}_p{perc}'] = np.percentile(props[prop], perc)
+
+            for i in ['MNDWI', 'NDVI', 'NDWI', 'BSI']:
+                indic_image, _ = mask(src, [zone], crop=True, filled=True, nodata=-np.inf, indexes=band_mapping[i])
+                indic_image[np.where(indic_image==-np.inf)] = np.nan
+                indic_image[np.where(image == 255)] = np.nan
+
+                metrics[f'{c}_POLYGONS_{i}_MAX'] = float(np.nanmax(indic_image))
+                metrics[f'{c}_POLYGONS_{i}_MEAN'] = float(np.nanmean(indic_image))
+                metrics[f'{c}_POLYGONS_{i}_MIN'] = float(np.nanmin(indic_image))
+                metrics[f'{c}_POLYGONS_{i}_STD'] = float(np.nanstd(indic_image))
+
+    return metrics

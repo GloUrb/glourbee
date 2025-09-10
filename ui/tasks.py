@@ -6,64 +6,44 @@ from glourbee.worker import app
 
 st.header("Tasks Manager")
 
+st.info('''
+The task manager allows users to visualize the tasks for creation, data downloading, and metric calculations launched via GloUrbEE-UI. 
+Currently, it does not provide the ability to track the progress of each task or cancel them, but these features are planned on the 
+application\'s development roadmap.
+''')
+
+if st.button('Refresh', icon='🔍'):
+    st.rerun()
+
 with st.spinner("Inspecting background workers"):
     i = app.control.inspect()
     active_tasks = i.active()
     scheduled_tasks = i.scheduled()
     reserved_tasks = i.reserved()
 
+@st.fragment
+def active(tasks):
+    workers_data = list()
+    for worker in tasks:
+        workers_data.append(pd.DataFrame(tasks[worker]))
+    
+    tasks_df = pd.concat(workers_data)
+
+    if len(tasks_df) > 0:
+        active_selected = st.dataframe(pd.json_normalize(tasks_df['kwargs']), hide_index=True, on_select="rerun", selection_mode="single-row",)
+
+        with st.popover('Cancel selected', icon='🟥', disabled=(len(active_selected.selection.rows) != 1)):
+            st.error('Sorry, not possible yet', icon='🥺')
+    else:
+        st.warning('Nothing to see here')
+
 st.title("Active tasks")
-st.write(active_tasks)
+active(active_tasks)
 
 st.title("Scheduled tasks")
-st.write(scheduled_tasks)
+active(scheduled_tasks)
 
 st.title("Reserved tasks")
 st.write("Reserved tasks are tasks that have been received, but are still waiting to be executed.")
-st.write(reserved_tasks)
+active(reserved_tasks)
 
-# tlist = pd.DataFrame(ee.data.getTaskList())
-# st.dataframe(tlist, 
-#              hide_index=True,
-#              column_config={
-#                  'creation_timestamp_ms': st.column_config.DatetimeColumn(
-#                      "creation"
-#                  ),
-#                  'update_timestamp_ms': st.column_config.DatetimeColumn(
-#                      "update"
-#                  ),
-#                  'start_timestamp_ms': st.column_config.DatetimeColumn(
-#                      "start"
-#                  ),
-#              })
-
-# # Mettre à jour l'état des taches lancées par l'utilisateur
-# db_tasks = st.session_state['db'].query('SELECT * FROM glourbmetrics WHERE run_by = :u AND state != \'COMPLETED\'',
-#                                              ttl=0,
-#                                              params={'u': st.session_state['user']})
-
-# for _, tsk in db_tasks.iterrows():
-#     gee_tasks = tlist.query(f'description.str.contains("{tsk["run_id"]}")')
-#     state_values = gee_tasks['state'].unique()
-
-#     new_state = None
-#     if len(state_values) == 1 and state_values == 'COMPLETED':
-#         new_state = 'COMPLETED'
-#     elif 'FAILED' in state_values:
-#         new_state = 'FAILED'
-#     elif 'RUNNING' in state_values:
-#         new_state = 'RUNNING'
-#     elif 'PENDING' in state_values:
-#         new_state = 'PENDING'
-#     else:
-#         new_state = 'SUBMITTED'
-    
-#     if new_state != tsk['state']:
-#         with st.session_state['db'].session as session:
-#             session.execute(text('UPDATE glourbmetrics SET state = :s WHERE id = :i'),
-#                             params={
-#                                 's': new_state,
-#                                 'i': tsk['id']
-#                             })
-#             session.commit()
-    

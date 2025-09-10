@@ -7,18 +7,16 @@ import streamlit as st
 import geopandas as gpd
 import leafmap.foliumap as leafmap
 
-from sqlalchemy import text
+from sqlalchemy import text, bindparam
 
 conn = st.connection("postgresql", "sql", url=os.environ['GLOURBEE_DB_URI'])
 aoi_db = gpd.read_postgis('select * from aoi order by last_access desc', con=conn.connect(), crs=3857, geom_col="geometry").to_crs(epsg=4326)
-zone_db = gpd.read_postgis('select * from zone', con=conn.connect(), crs=3857, geom_col="geometry").to_crs(epsg=4326)
 
 st.header('Manage GloUrbEE extraction zones', divider=True)
 st.info('This module allows you to explore, add, or remove new extraction areas on this GloUrbEE server. All users areas are shared, but you can only delete those that belong to you.')
 
-m = leafmap.Map(center=(45.7326672, 4.8372539))
+m = leafmap.Map(center=(45.7326672, 4.8372539), draw_control=False)
 if len(aoi_db) > 0:
-    m.add_gdf(zone_db, layer_name="Extraction zones", info_mode=None)
     m.add_gdf(aoi_db, layer_name="Areas of interest", style={"color": "black"})
     m.zoom_to_gdf(aoi_db)
 
@@ -45,16 +43,30 @@ else:
 
         st.session_state["selected_aoi"] = selected_zone["fid"]
 
+
+# SUPPRESSION D'UNE ZONE ET DE TOUS SES FICHIERS
         owned = selected_zone["author"] == st.session_state["user"]["name"]
         with st.popover("Delete selected", icon='🗑️', disabled = not owned, help="You can only delete the dataset from which you are the author"):
             st.warning("This will delete the selected zones and all data associated on this GloUrbEE server", icon='🚨')
             if st.button("Confirm"):
-                with st.spinner("Deleting..."):
+                with st.spinner("Cleaning database and deleting files..."):
                     with conn.session as session:   
-                        session.execute(text('delete from zone cascade where aoi_fid=:fid;'), {"fid": int(selected_zone["fid"])})
-                        session.execute(text('delete from aoi cascade where fid=:fid;'), {"fid": int(selected_zone["fid"])})
+                        session.execute(text('delete from zone where aoi_fid=:fid;'), {"fid": int(selected_zone["fid"])})
+                        session.execute(text('delete from aoi where fid=:fid;'), {"fid": int(selected_zone["fid"])})
                         session.commit()
                 
+                img_to_remove = gpd.read_postgis(text('select * from image where not st_intersects(geometry, (select st_union(geometry) from aoi))'), 
+                                                 conn.connect(), crs=3857, geom_col="geometry")
+                img_to_remove = img_to_remove.query('path.notnull()', engine='python')
+                
+                for _, img in img_to_remove.iterrows():
+                    os.remove(img['path'])
+
+                with conn.session as session:
+                    sql = text('delete from image where fid in :fid_to_remove').bindparams(bindparam('fid_to_remove', expanding=True))
+                    session.execute(sql, params={'fid_to_remove': list(img_to_remove['fid'])})
+                    session.commit()
+
                 st.rerun()
     
     else:
@@ -105,10 +117,13 @@ if upload_form:
         st.stop()
 
     with st.spinner("Uploading..."):
-        aoi = uploaded_gdf[["geometry"]].dissolve().simplify(10)
+        aoi = uploaded_gdf[["geometry"]].dissolve()
+        aoi["geometry"] = aoi.simplify(10)
         aoi['author'] = author
         aoi['type'] = zones_type
         aoi['description'] = description
+        uploaded_gdf["geometry"] = uploaded_gdf.simplify(10)
+        uploaded_gdf['zone_fid'] = uploaded_gdf[fid_field]
 
         aoi.to_postgis(name='aoi', con=conn.connect(), if_exists='append')
 
@@ -121,8 +136,7 @@ if upload_form:
         aoi_fid = df.loc[0]['fid']
 
         uploaded_gdf['aoi_fid'] = aoi_fid
-        uploaded_gdf['zone_fid'] = uploaded_gdf[fid_field]
-        zones = uploaded_gdf[["aoi_fid", "zone_fid", "geometry"]].simplify(10)
+        zones = uploaded_gdf[["aoi_fid", "zone_fid", "geometry"]]
 
         zones.to_postgis(name='zone', con=conn.connect(), if_exists='append')
 

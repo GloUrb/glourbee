@@ -2,6 +2,9 @@ services:
   ui:
     image: ghcr.io/evs-gis/glourbee-ui:latest
     restart: always
+    depends_on:
+      - worker
+      - db
     build:
       context: .
       dockerfile: ./Dockerfile
@@ -19,14 +22,27 @@ services:
   worker:
     image: ghcr.io/evs-gis/glourbee-ui:latest
     restart: always
+    depends_on:
+      - broker
+      - db
     build:
       context: .
       dockerfile: ./Dockerfile
-    command: [celery, -A, glourbee.worker, worker, -c, "3", -l, INFO]
+    command: [celery, -A, glourbee.worker, worker, -c, "1", -l, INFO]
     environment:
       - GLOURBEE_DATASTORE=$GLOURBEE_DATASTORE
       - GLOURBEE_BROKER_URL=$GLOURBEE_BROKER_URL
       - GLOURBEE_DB_URI=$GLOURBEE_DB_URI
+      - GLOURBEE_EMAIL_FROM=$GLOURBEE_EMAIL_FROM
+      - GLOURBEE_EMAIL_SERVER=$GLOURBEE_EMAIL_SERVER
+      - GLOURBEE_EMAIL_PORT=$GLOURBEE_EMAIL_PORT
+      - GLOURBEE_EMAIL_USER=$GLOURBEE_EMAIL_USER
+      - GLOURBEE_EMAIL_PASSWORD=$GLOURBEE_EMAIL_PASSWORD
+      - FILESENDER_SCRIPT=$FILESENDER_SCRIPT
+      - FILESENDER_BASE_URL=$FILESENDER_BASE_URL
+      - FILESENDER_USERNAME=$FILESENDER_USERNAME
+      - FILESENDER_APIKEY=$FILESENDER_APIKEY
+      - FILESENDER_FROM=$FILESENDER_FROM
     volumes:
       - data:/data
       - ./ee-glourb-718927cf3d80.json:/app/earthengine-key.json:ro
@@ -36,11 +52,6 @@ services:
   broker:
     image: redis:latest
     restart: always
-    ports:
-      - "6379:6379" # For dev only
-    volumes:
-      - ./ui:/app/ui:ro # For dev only
-      - ./glourbee:/app/glourbee:ro # For dev only
 
   db:
     image: postgis/postgis:latest
