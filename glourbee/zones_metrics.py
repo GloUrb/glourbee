@@ -301,6 +301,9 @@ def calculcateZONEsMetricsLocal(image_path: str, zone: MultiPolygon | Polygon) -
             image, _ = mask(src, [zone], crop=True, filled=True, nodata=-np.inf, indexes=band_mapping[c])
             image[np.where(image==-np.inf)] = 255
 
+            if c == 'CLOUDS':
+                metrics['ZONE_AREA'] = np.sum(np.where(image!=255))
+
             labels = measure.label(image, background=255, connectivity=2).astype(np.uint8)
             metrics[f'{c}_POLYGONS_COUNT'] = int(np.max(labels))
 

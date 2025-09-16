@@ -7,7 +7,7 @@ secondaryBackgroundColor="#cbeac7"
 level = 'info'
 
 [client]
-showErrorDetails = "full" # Set to false in production
+showErrorDetails = "none"
 toolbarMode = "auto"
 
 [runner]
