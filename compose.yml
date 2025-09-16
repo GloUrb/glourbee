@@ -18,6 +18,8 @@ services:
       - data:/data
       - ./ui:/app/ui:ro # For dev only
       - ./glourbee:/app/glourbee:ro # For dev only
+      - ./alembic:/app/alembic:ro # For dev only
+      - ./alembic.ini:/app/alembic.ini:ro # For dev only
 
   worker:
     image: ghcr.io/evs-gis/glourbee-ui:latest
@@ -48,6 +50,8 @@ services:
       - ./ee-glourb-718927cf3d80.json:/app/earthengine-key.json:ro
       - ./ui:/app/ui:ro # For dev only
       - ./glourbee:/app/glourbee:ro # For dev only
+      - ./alembic:/app/alembic:ro # For dev only
+      - ./alembic.ini:/app/alembic.ini:ro # For dev only
 
   broker:
     image: redis:latest

@@ -17,17 +17,12 @@ setup(
         'geedim',
         'cryptography',
         'geetools==0.6.14', # mosaicSameDay deprecated in 1.0.0 :(
-        # 'ipython',
-        # 'ipykernel',
-        # 'ipyleaflet==0.16',
         'streamlit>=1.49.0',
         'leafmap',
         'psycopg2-binary',
         'sqlalchemy',
+        'alembic',
         'geoalchemy2',
-        # 'alembic',
-        # 'debugpy',
-        # 'authlib>=1.3.2',
         'redis',
         'celery[redis]'
     ],

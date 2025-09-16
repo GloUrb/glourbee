@@ -7,9 +7,20 @@ import streamlit as st
 import json
 import ee
 
+from alembic.config import Config
+from alembic import command
 from glourbee import __version__ as glourbee_version
 
 st.set_page_config(layout="wide")
+
+
+@st.cache_resource
+def run_migrations():
+    alembic_cfg = Config("alembic.ini")
+    command.upgrade(alembic_cfg, "head")
+
+run_migrations()
+
 
 with st.sidebar:
     if "user" in st.session_state.keys() and st.session_state["user"]["is_logged_in"]:

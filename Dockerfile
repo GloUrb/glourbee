@@ -16,6 +16,8 @@ COPY ./ui ./ui
 COPY ./glourbee ./glourbee
 COPY ./filesender ./filesender
 COPY ./setup.py ./setup.py
+COPY ./alembic ./alembic
+COPY ./alembic.ini ./alembic.ini
 
 RUN pip3 install -U pip
 RUN pip3 install -e . \
