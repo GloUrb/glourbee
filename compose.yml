@@ -1,6 +1,6 @@
 services:
   ui:
-    image: ghcr.io/evs-gis/glourbee-ui:latest
+    image: ghcr.io/glourb/glourbee-ui:latest
     restart: always
     depends_on:
       - worker
@@ -22,7 +22,7 @@ services:
       - ./alembic.ini:/app/alembic.ini:ro # For dev only
 
   worker:
-    image: ghcr.io/evs-gis/glourbee-ui:latest
+    image: ghcr.io/glourb/glourbee-ui:latest
     restart: always
     depends_on:
       - broker
