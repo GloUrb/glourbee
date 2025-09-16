@@ -18,11 +18,11 @@ if st.button('Refresh', icon='🔍'):
 with st.spinner("Inspecting background workers"):
     i = app.control.inspect()
     active_tasks = i.active()
-    scheduled_tasks = i.scheduled()
     reserved_tasks = i.reserved()
+    # scheduled_tasks = i.scheduled()
 
 @st.fragment
-def active(tasks):
+def list_tasks(tasks):
     workers_data = list()
     for worker in tasks:
         workers_data.append(pd.DataFrame(tasks[worker]))
@@ -38,12 +38,13 @@ def active(tasks):
         st.warning('Nothing to see here')
 
 st.title("Active tasks")
-active(active_tasks)
+st.write("Tasks currently executed on workers")
+list_tasks(active_tasks)
 
-st.title("Scheduled tasks")
-active(scheduled_tasks)
+st.title("Tasks in queue")
+st.write("Tasks that have been received, but are still waiting for a slot on a worker to be executed")
+list_tasks(reserved_tasks)
 
-st.title("Reserved tasks")
-st.write("Reserved tasks are tasks that have been received, but are still waiting to be executed.")
-active(reserved_tasks)
-
+# st.title("Scheduled tasks")
+# st.write("System scheduled tasks (like cleaning old files)")
+# active(scheduled_tasks)
