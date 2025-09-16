@@ -1,6 +1,6 @@
 FROM python:3.12-slim
 LABEL org.opencontainers.image.authors="samuel.dunesme@ens-lyon.fr"
-LABEL org.opencontainers.image.source="https://github.com/EVS-GIS/glourbee"
+LABEL org.opencontainers.image.source="https://github.com/GloUrb/glourbee"
 LABEL org.opencontainers.image.description="User interface for GloUrb-EE. This project is part of the GloUrb ANR."
 LABEL org.opencontainers.image.licenses="GPL-3.0-only"
 
