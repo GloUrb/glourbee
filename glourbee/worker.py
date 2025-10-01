@@ -14,7 +14,6 @@ from email.mime.text import MIMEText
 from datetime import datetime
 from sqlalchemy import text, create_engine, bindparam
 from celery import Celery
-from celery.schedules import crontab
 from shapely.geometry import shape, Polygon
 
 app = Celery('glourbee-worker', 
@@ -53,7 +52,7 @@ def gee_process(aoi_fid: int,
     
     assert satellite_type in ['Landsat', 'Sentinel-2']
 
-    with open('/app/earthengine-key.json') as f:
+    with open(os.environ['GLOURBEE_EE_JSONKEY']) as f:
         ee_json_key = json.load(f)
     credentials = ee.ServiceAccountCredentials(email=ee_json_key['client_email'], key_data=json.dumps(ee_json_key))
     ee.Initialize(credentials)

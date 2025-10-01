@@ -5,9 +5,6 @@ services:
     depends_on:
       - worker
       - db
-    build:
-      context: .
-      dockerfile: ./Dockerfile
     ports:
       - "8501:8501"
     environment:
@@ -16,10 +13,6 @@ services:
       - GLOURBEE_DB_URI=$GLOURBEE_DB_URI
     volumes:
       - data:/data
-      - ./ui:/app/ui:ro # For dev only
-      - ./glourbee:/app/glourbee:ro # For dev only
-      - ./alembic:/app/alembic:ro # For dev only
-      - ./alembic.ini:/app/alembic.ini:ro # For dev only
 
   worker:
     image: ghcr.io/glourb/glourbee-ui:latest
@@ -27,9 +20,6 @@ services:
     depends_on:
       - broker
       - db
-    build:
-      context: .
-      dockerfile: ./Dockerfile
     command: [celery, -A, glourbee.worker, worker, -c, "1", -l, INFO]
     environment:
       - GLOURBEE_DATASTORE=$GLOURBEE_DATASTORE
@@ -48,10 +38,6 @@ services:
     volumes:
       - data:/data
       - ./ee-glourb-718927cf3d80.json:/app/earthengine-key.json:ro
-      - ./ui:/app/ui:ro # For dev only
-      - ./glourbee:/app/glourbee:ro # For dev only
-      - ./alembic:/app/alembic:ro # For dev only
-      - ./alembic.ini:/app/alembic.ini:ro # For dev only
 
   broker:
     image: redis:latest
@@ -67,8 +53,6 @@ services:
       - POSTGRES_PASSWORD=$POSTGRES_PASSWORD
     volumes:
       - db-data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432" # For dev only
 
 volumes:
   data:
