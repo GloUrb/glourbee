@@ -36,6 +36,7 @@ selected_range = st.date_input("Selected date range", value=ival, min_value="198
 # Créer la sélection d'images en fonction de l'interval de dates choisi
 if len(selected_range) == 2:
     selected_images = image_db[(image_db['date'] >= selected_range[0]) & (image_db['date'] <= selected_range[1])]
+    selected_images['date'] = selected_images['date'].astype(str)
     st.session_state['selected_images'] = selected_images.query('processed==True')
 else:
     selected_images = list()
