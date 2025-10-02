@@ -113,6 +113,9 @@ def gee_process(aoi_fid: int,
     sql = text('select * from image where name in :col and "user"=:user and path is null').bindparams(bindparam('col', expanding=True), bindparam('user'))
     new_images_gdf = gpd.read_postgis(sql, con=engine, params={'col': list(new_images_gdf['name']), 'user': user}, crs=3857, geom_col="geometry")
 
+    output_dir = os.path.join(os.environ['GLOURBEE_DATASTORE'], 'all')
+    os.makedirs(output_dir, exist_ok=True)
+    
     try:
         collection = collection.filter(ee.Filter.inList('system:index', list(new_images_gdf["name"])))
 
@@ -121,12 +124,35 @@ def gee_process(aoi_fid: int,
                                                     watermask_expression=watermask_expression,
                                                     activechannel_expression=activechannel_expression, 
                                                     vegetation_expression=vegetation_expression)
-        
-        output_dir = os.path.join(os.environ['GLOURBEE_DATASTORE'], 'all')
-        os.makedirs(output_dir, exist_ok=True)
 
-        with redirect_stdout(None):
-            geemap.download_ee_image_collection(collection=collection, out_dir=output_dir, crs="EPSG:3857")
+    except:
+        with engine.connect() as con:
+            sql = text('delete from image where fid in :fids').bindparams(bindparam('fids', expanding=True))
+            con.execute(sql, parameters={'fids': list(new_images_gdf["fid"])})
+            con.commit()
+
+        message = f'Error preparing GEE process.\
+            aoi_fid={aoi_fid}\
+            date_range={date_range}\
+            cloud_filter={cloud_filter}\
+            cloud_masking={cloud_masking}\
+            satellite_type={satellite_type}\
+            watermask_expression={watermask_expression}\
+            activechannel_expression={activechannel_expression}\
+            vegetation_expression={vegetation_expression}\
+            user={user}\
+            email_notif={email_notif}\
+            '
+
+        if os.environ['GLOURBEE_ADMINISTRATOR_EMAIL']:
+            email_notification(os.environ['GLOURBEE_ADMINISTRATOR_EMAIL'], message, success=False)
+        if email_notif:
+            email_notification(email_notif, message, success=False)
+
+        return message
+    
+    try:
+        geemap.download_ee_image_collection(collection=collection, out_dir=output_dir, crs="EPSG:3857")
 
         with engine.connect() as con:
             sql = text('update image set path=concat(:dir, \'/\', "name", \'.tif\') where fid in :fids').bindparams(bindparam('dir'), bindparam('fids', expanding=True))
@@ -139,9 +165,24 @@ def gee_process(aoi_fid: int,
             con.execute(sql, parameters={'fids': list(new_images_gdf["fid"])})
             con.commit()
 
-        message = 'Error processing images'
+        message = f'Error when processing and downloading images.\
+            aoi_fid={aoi_fid}\
+            date_range={date_range}\
+            cloud_filter={cloud_filter}\
+            cloud_masking={cloud_masking}\
+            satellite_type={satellite_type}\
+            watermask_expression={watermask_expression}\
+            activechannel_expression={activechannel_expression}\
+            vegetation_expression={vegetation_expression}\
+            user={user}\
+            email_notif={email_notif}\
+            '
+
+        if os.environ['GLOURBEE_ADMINISTRATOR_EMAIL']:
+            email_notification(os.environ['GLOURBEE_ADMINISTRATOR_EMAIL'], message, success=False)
         if email_notif:
             email_notification(email_notif, message, success=False)
+
         return message
 
     message = f'{len(new_images_gdf)} images processed'
