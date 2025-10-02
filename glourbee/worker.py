@@ -125,24 +125,24 @@ def gee_process(aoi_fid: int,
                                                     activechannel_expression=activechannel_expression, 
                                                     vegetation_expression=vegetation_expression)
 
-    except:
+    except Exception as err:
         with engine.connect() as con:
             sql = text('delete from image where fid in :fids').bindparams(bindparam('fids', expanding=True))
             con.execute(sql, parameters={'fids': list(new_images_gdf["fid"])})
             con.commit()
 
-        message = f'Error preparing GEE process.\
-            aoi_fid={aoi_fid}\
-            date_range={date_range}\
-            cloud_filter={cloud_filter}\
-            cloud_masking={cloud_masking}\
-            satellite_type={satellite_type}\
-            watermask_expression={watermask_expression}\
-            activechannel_expression={activechannel_expression}\
-            vegetation_expression={vegetation_expression}\
-            user={user}\
-            email_notif={email_notif}\
-            '
+        message = f'Error preparing GEE process.\n\
+            aoi_fid={aoi_fid}\n\
+            date_range={date_range}\n\
+            cloud_filter={cloud_filter}\n\
+            cloud_masking={cloud_masking}\n\
+            satellite_type={satellite_type}\n\
+            watermask_expression={watermask_expression}\n\
+            activechannel_expression={activechannel_expression}\n\
+            vegetation_expression={vegetation_expression}\n\
+            user={user}\n\
+            email_notif={email_notif}\n\n\
+            {err}'
 
         if os.environ['GLOURBEE_ADMINISTRATOR_EMAIL']:
             email_notification(os.environ['GLOURBEE_ADMINISTRATOR_EMAIL'], message, success=False)
@@ -159,24 +159,24 @@ def gee_process(aoi_fid: int,
             con.execute(sql, parameters={'dir': output_dir, 'fids': list(new_images_gdf["fid"])})
             con.commit()
 
-    except:
+    except Exception as err:
         with engine.connect() as con:
             sql = text('delete from image where fid in :fids').bindparams(bindparam('fids', expanding=True))
             con.execute(sql, parameters={'fids': list(new_images_gdf["fid"])})
             con.commit()
 
-        message = f'Error when processing and downloading images.\
-            aoi_fid={aoi_fid}\
-            date_range={date_range}\
-            cloud_filter={cloud_filter}\
-            cloud_masking={cloud_masking}\
-            satellite_type={satellite_type}\
-            watermask_expression={watermask_expression}\
-            activechannel_expression={activechannel_expression}\
-            vegetation_expression={vegetation_expression}\
-            user={user}\
-            email_notif={email_notif}\
-            '
+        message = f'Error when processing and downloading images.\n\
+            aoi_fid={aoi_fid}\n\
+            date_range={date_range}\n\
+            cloud_filter={cloud_filter}\n\
+            cloud_masking={cloud_masking}\n\
+            satellite_type={satellite_type}\n\
+            watermask_expression={watermask_expression}\n\
+            activechannel_expression={activechannel_expression}\n\
+            vegetation_expression={vegetation_expression}\n\
+            user={user}\n\
+            email_notif={email_notif}\n\n\
+            {err}'
 
         if os.environ['GLOURBEE_ADMINISTRATOR_EMAIL']:
             email_notification(os.environ['GLOURBEE_ADMINISTRATOR_EMAIL'], message, success=False)
