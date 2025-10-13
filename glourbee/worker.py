@@ -155,7 +155,7 @@ def gee_process(aoi_fid: int,
         geemap.download_ee_image_collection(collection=collection, out_dir=output_dir, crs="EPSG:3857")
 
         with engine.connect() as con:
-            sql = text('update image set path=concat(:dir, \'/\', "name", \'.tif\') where fid in :fids').bindparams(bindparam('dir'), bindparam('fids', expanding=True))
+            sql = text('''update image set path = :dir || '/' || "name" || '.tif' where fid in :fids''').bindparams(bindparam('dir'), bindparam('fids', expanding=True))
             con.execute(sql, parameters={'dir': output_dir, 'fids': list(new_images_gdf["fid"])})
             con.commit()
 
