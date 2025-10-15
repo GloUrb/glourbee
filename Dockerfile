@@ -23,7 +23,7 @@ LABEL org.opencontainers.image.source="https://github.com/GloUrb/glourbee"
 LABEL org.opencontainers.image.description="User interface for GloUrb-EE. This project is part of the GloUrb ANR."
 LABEL org.opencontainers.image.licenses="GPL-3.0-only"
 
-RUN apt-get update && apt-get install -y curl
+RUN apt-get update && apt-get install -y curl libexpat1
 WORKDIR /app
 
 COPY ./ui ./ui
@@ -33,6 +33,7 @@ COPY ./alembic.ini ./alembic.ini
 
 COPY --from=builder /app/dist /app/dist
 
+# RUN pip3 install -r requirements.txt
 RUN pip3 install /app/dist/*.whl
 RUN rm -rf /app/dist
 

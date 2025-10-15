@@ -5,6 +5,9 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools]
 packages = ["glourbee"]
 
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
+
 [project]
 name = "glourbee"
 authors = [
@@ -13,26 +16,5 @@ authors = [
 description = "Use GEE to extract metrics on river corridors DGOs. This project is part of the GloUrb ANR."
 readme = "README.md"
 license-files = ["LICENSE"]
-dynamic = ["version"]
+dynamic = ["version", "dependencies"]
 requires-python = ">=3.10"
-dependencies = [
-    'click',
-    'numpy',
-    'geopandas',
-    'rasterio',
-    'scikit-image',
-    'earthengine-api',
-    'pandas',
-    'geemap',
-    'geedim',
-    'cryptography',
-    'geetools==0.6.14', # mosaicSameDay deprecated in 1.0.0 :(
-    'streamlit>=1.49.0',
-    'leafmap',
-    'psycopg2-binary',
-    'sqlalchemy',
-    'alembic',
-    'geoalchemy2',
-    'redis',
-    'celery[redis]'
-]
