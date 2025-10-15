@@ -12,7 +12,7 @@ git \
 
 COPY . .
 
-RUN pip install build setuptools setuptools_scm wheel
+RUN pip3 install build setuptools setuptools_scm wheel
 RUN python -m build
 
 
@@ -23,6 +23,7 @@ LABEL org.opencontainers.image.source="https://github.com/GloUrb/glourbee"
 LABEL org.opencontainers.image.description="User interface for GloUrb-EE. This project is part of the GloUrb ANR."
 LABEL org.opencontainers.image.licenses="GPL-3.0-only"
 
+RUN apt-get update && apt-get install -y curl
 WORKDIR /app
 
 COPY ./ui ./ui
@@ -37,7 +38,7 @@ RUN rm -rf /app/dist
 
 EXPOSE 8501
 
-HEALTHCHECK CMD curl --fail http://localhost:8501/_stcore/health
+HEALTHCHECK --interval=1m --timeout=3s --start-period=5s CMD curl --fail http://localhost:8501/_stcore/health
 
 # Creates a non-root user with an explicit UID and adds permission to access the /app folder
 RUN adduser -u 5678 --disabled-password --gecos "" glourbee && chown -R glourbee /app
