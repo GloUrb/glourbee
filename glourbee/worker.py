@@ -9,7 +9,6 @@ import re
 from subprocess import call
 from tempfile import NamedTemporaryFile
 from zipfile import ZipFile
-from contextlib import redirect_stdout
 from email.mime.text import MIMEText
 from datetime import datetime
 from sqlalchemy import text, create_engine, bindparam
@@ -154,11 +153,6 @@ def gee_process(aoi_fid: int,
     try:
         geemap.download_ee_image_collection(collection=collection, out_dir=output_dir, crs="EPSG:3857")
 
-        with engine.connect() as con:
-            sql = text('''update image set path = :dir || '/' || "name" || '.tif' where fid in :fids''').bindparams(bindparam('dir'), bindparam('fids', expanding=True))
-            con.execute(sql, parameters={'dir': output_dir, 'fids': list(new_images_gdf["fid"])})
-            con.commit()
-
     except Exception as err:
         with engine.connect() as con:
             sql = text('delete from image where fid in :fids').bindparams(bindparam('fids', expanding=True))
@@ -184,6 +178,11 @@ def gee_process(aoi_fid: int,
             email_notification(email_notif, message, success=False)
 
         return message
+    
+    with engine.connect() as con:
+        sql = text('''update image set path = :dir || '/' || "name" || '.tif' where fid in :fids''').bindparams(bindparam('dir'), bindparam('fids', expanding=True))
+        con.execute(sql, parameters={'dir': output_dir, 'fids': list(new_images_gdf["fid"])})
+        con.commit()
 
     message = f'{len(new_images_gdf)} images processed'
     if email_notif:
