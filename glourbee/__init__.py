@@ -4,4 +4,5 @@ GloUrbEE
 A package to extract river corridor metrics with Google Earth Engine.
 """
 
-__version__ = 2.0
+from importlib.metadata import version
+__version__ = version("glourbee")

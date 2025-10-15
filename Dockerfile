@@ -1,3 +1,22 @@
+### Build stage
+FROM python:3.12-slim AS builder
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y \
+build-essential \
+curl \
+libexpat1 \
+git \
+&& rm -rf /var/lib/apt/lists/*
+
+COPY . .
+
+RUN pip install build setuptools setuptools_scm wheel
+RUN python -m build
+
+
+### GloUrbEE image
 FROM python:3.12-slim
 LABEL org.opencontainers.image.authors="samuel.dunesme@ens-lyon.fr"
 LABEL org.opencontainers.image.source="https://github.com/GloUrb/glourbee"
@@ -6,22 +25,15 @@ LABEL org.opencontainers.image.licenses="GPL-3.0-only"
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    curl \
-    libexpat1 \
-    && rm -rf /var/lib/apt/lists/*
-
 COPY ./ui ./ui
-COPY ./glourbee ./glourbee
 COPY ./filesender ./filesender
-COPY ./setup.py ./setup.py
 COPY ./alembic ./alembic
 COPY ./alembic.ini ./alembic.ini
 
-RUN pip3 install -U pip
-RUN pip3 install -e . \
-    && pip3 cache purge
+COPY --from=builder /app/dist /app/dist
+
+RUN pip3 install /app/dist/*.whl
+RUN rm -rf /app/dist
 
 EXPOSE 8501
 
