@@ -102,10 +102,10 @@ def gee_process(aoi_fid: int,
         return message
     
     new_images_gdf = gpd.GeoDataFrame(new_images, columns=['name', 'json_geom', 'date'], geometry=[Polygon(shape(f[1])) for f in new_images], crs=4326).to_crs(3857)
-    new_images_gdf["user"] = user
+    new_images_gdf = new_images_gdf[["name", "date", "geometry"]]
     new_images_gdf["geometry"] = new_images_gdf.simplify(10)
+    new_images_gdf["user"] = user
     new_images_gdf["satellite"] = satellite_type
-    new_images_gdf = new_images_gdf[["name", "date", "user", "satellite", "geometry"]]
     new_images_gdf.to_postgis(name='image', con=engine, if_exists='append')
     
     # RE-READ pour récupérer les FID assignés par pgsql
@@ -153,6 +153,15 @@ def gee_process(aoi_fid: int,
     try:
         geemap.download_ee_image_collection(collection=collection, out_dir=output_dir, crs="EPSG:3857")
 
+        new_images_gdf["path"] = new_images_gdf.apply(lambda row: os.path.join(os.environ['GLOURBEE_DATASTORE'], user, f"{row['name']}.tif"), axis=1)
+
+        with engine.connect() as con:
+            for _, row in new_images_gdf.iterrows():
+                sql = text('update image set path=:path where fid=:fid')
+                con.execute(sql, parameters={'path': row['path'], 'fid': row['fid']})
+
+            con.commit()
+
     except Exception as err:
         with engine.connect() as con:
             sql = text('delete from image where fid in :fids').bindparams(bindparam('fids', expanding=True))
@@ -178,11 +187,6 @@ def gee_process(aoi_fid: int,
             email_notification(email_notif, message, success=False)
 
         return message
-    
-    with engine.connect() as con:
-        sql = text('''update image set path = :dir || '/' || "name" || '.tif' where fid in :fids''').bindparams(bindparam('dir'), bindparam('fids', expanding=True))
-        con.execute(sql, parameters={'dir': output_dir, 'fids': list(new_images_gdf["fid"])})
-        con.commit()
 
     message = f'{len(new_images_gdf)} images processed'
     if email_notif:
