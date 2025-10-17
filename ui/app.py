@@ -80,6 +80,7 @@ pg = st.navigation([
         st.Page("extraction.py", title="Extraction zones", icon="🌍"), 
         st.Page('gee.py', title="GEE processing", icon="☁️"),
         st.Page("metrics.py", title="Metrics calculation", icon="📈"),
+        st.Page("local.py", title="Local adjustments", icon="🖥️"),
         st.Page("tasks.py", title="Tasks manager", icon="📋")
     ])
 pg.run()
