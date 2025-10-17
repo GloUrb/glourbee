@@ -91,11 +91,24 @@ def new_data_form():
     form = st.container(border=1)
     form_daterange = form.date_input('Calculated date range', value=("2025-01-01", "2025-01-31"), min_value="1980-01-01", max_value="today")
 
+    form_repeat_years = form.checkbox('Repeat date range every year', value=False)
     col1, col2 = form.columns(2)
-    cloud_filter= col1.slider('Cloud filter', min_value= 0, max_value= 100, value = 80, help="Maximum cloud coverage accepted at the image scale")
-    cloud_masking = col1.toggle('Cloud masking', value = True, help="Mask the clouds on the results (recommended)")
 
-    satellite_type = col2.radio('Satellite imagery dataset', 
+    if form_repeat_years:
+        if form_daterange[0].year != form_daterange[1].year:
+            form.error("In order to repeat the date range every year, the start and end dates must be included in the same year.")
+        else:
+            form_repeat_start = col1.number_input("Repeat start", value=2010, min_value=1980, max_value=2030)
+            form_repeat_end = col2.number_input("Repeat end", value=2020, min_value=1981, max_value=2030)
+
+            if form_repeat_start >= form_repeat_end:
+                form.error("Repeat end should be striclty superior to repeat start.")
+
+    col3, col4 = form.columns(2)
+    cloud_filter= col3.slider('Cloud filter', min_value= 0, max_value= 100, value = 80, help="Maximum cloud coverage accepted at the image scale")
+    cloud_masking = col3.toggle('Cloud masking', value = True, help="Mask the clouds on the results (recommended)")
+
+    satellite_type = col4.radio('Satellite imagery dataset', 
                                 options=['Landsat', 'Sentinel-2'], 
                                 captions = ['Data available since 1982-08-22', 'Data available since 2017-03-28'])
 
@@ -131,18 +144,43 @@ def new_data_form():
 
     if form.button("Start tasks"):
         with st.spinner('Starting tasks...'):
-            gee_process.delay(
-                aoi_fid=int(st.session_state['selected_aoi']),
-                date_range=(str(form_daterange[0]), str(form_daterange[1])),
-                cloud_filter=cloud_filter,
-                cloud_masking=cloud_masking,
-                satellite_type=satellite_type,
-                watermask_expression=watermask_expression,
-                activechannel_expression=activechannel_expression,
-                vegetation_expression=vegetation_expression,
-                user=user,
-                email_notif=email
-            )
+            if not form_repeat_years or not form_repeat_start or not form_repeat_end:
+                gee_process.delay(
+                    aoi_fid=int(st.session_state['selected_aoi']),
+                    date_range=(str(form_daterange[0]), str(form_daterange[1])),
+                    cloud_filter=cloud_filter,
+                    cloud_masking=cloud_masking,
+                    satellite_type=satellite_type,
+                    watermask_expression=watermask_expression,
+                    activechannel_expression=activechannel_expression,
+                    vegetation_expression=vegetation_expression,
+                    user=user,
+                    email_notif=email
+                )
+
+            elif (form_repeat_start < form_repeat_end) and form_repeat_years:
+                for year in range(form_repeat_start, form_repeat_end, 1):
+                    date_range = (
+                            f"{year}-{form_daterange[0].month}-{form_daterange[0].day}",
+                            f"{year}-{form_daterange[1].month}-{form_daterange[1].day}",
+                        )
+
+                    gee_process.delay(
+                        aoi_fid=int(st.session_state['selected_aoi']),
+                        date_range=date_range,
+                        cloud_filter=cloud_filter,
+                        cloud_masking=cloud_masking,
+                        satellite_type=satellite_type,
+                        watermask_expression=watermask_expression,
+                        activechannel_expression=activechannel_expression,
+                        vegetation_expression=vegetation_expression,
+                        user=user,
+                        email_notif=email
+                    )
+
+            else:
+                st.error("Error with the repeat parameters. Please check the date and repeat ranges.")
+
         
         st.balloons()
         st.toast('Tasks started. Check your task manager to track progress', icon='🚀')
