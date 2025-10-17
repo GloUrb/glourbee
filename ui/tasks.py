@@ -1,5 +1,4 @@
 import streamlit as st
-import ee
 import pandas as pd
 
 from glourbee.worker import app
@@ -19,7 +18,6 @@ with st.spinner("Inspecting background workers"):
     i = app.control.inspect()
     active_tasks = i.active()
     reserved_tasks = i.reserved()
-    # scheduled_tasks = i.scheduled()
 
 @st.fragment
 def list_tasks(tasks):
@@ -44,7 +42,3 @@ list_tasks(active_tasks)
 st.title("Tasks in queue")
 st.write("Tasks that have been received, but are still waiting for a slot on a worker to be executed")
 list_tasks(reserved_tasks)
-
-# st.title("Scheduled tasks")
-# st.write("System scheduled tasks (like cleaning old files)")
-# active(scheduled_tasks)

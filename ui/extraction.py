@@ -76,68 +76,72 @@ m.to_streamlit()
 
 st.title('Upload new extraction zones')
 
-with st.form('upload_new'):
-    zones_type = st.text_input('Extraction zones type', max_chars=50,
-                               help='Literal description of the zones types (eg. DGOs, Cites, Gravel quarries, ...)', )
-    description = st.text_area('Extraction zones description', max_chars=100,
-                               help='Literal description of the zones. Give a maximum details so other GloUrb researcher can understand what are these zones about.')
-    fid_field = st.text_input('Unique identifier Field', max_chars=50,
-                              help='Field name that contains the unique identifier of each zone.')
-    author = st.text_input(
-        'Author', max_chars=50, help='Identify the producer of those extraction zones.', value=st.session_state['user']['name'], disabled=True)
-    zone_file = st.file_uploader('Extraction zones file', type=[
-                                 'gpkg', 'zip'], accept_multiple_files=False, help="Please zip shapefiles with all their side files.")
+@st.fragment
+def new_zones_form():
+    with st.form('upload_new'):
+        zones_type = st.text_input('Extraction zones type', max_chars=50,
+                                help='Literal description of the zones types (eg. DGOs, Cites, Gravel quarries, ...)', )
+        description = st.text_area('Extraction zones description', max_chars=100,
+                                help='Literal description of the zones. Give a maximum details so other GloUrb researcher can understand what are these zones about.')
+        fid_field = st.text_input('Unique identifier Field', max_chars=50,
+                                help='Field name that contains the unique identifier of each zone.')
+        author = st.text_input(
+            'Author', max_chars=50, help='Identify the producer of those extraction zones.', value=st.session_state['user']['name'], disabled=True)
+        zone_file = st.file_uploader('Extraction zones file', type=[
+                                    'gpkg', 'zip'], accept_multiple_files=False, help="Please zip shapefiles with all their side files.")
 
-    upload_form = st.form_submit_button('Upload to GloUrbEE collection')
+        upload_form = st.form_submit_button('Upload to GloUrbEE collection')
 
-if upload_form:
-    validate = True
+    if upload_form:
+        validate = True
 
-    if not zones_type:
-        st.error('Please specify extraction zones type')
-        st.stop()
-    if not zone_file:
-        st.error('Please specify extraction zones file')
-        st.stop()
-    if not description:
-        st.error('Please specify extraction zones description')
-        st.stop()
-    if not fid_field:
-        st.error('Please specify the unique identifier field')
-        st.stop()
-    if not author:
-        st.error('Please specify the author of the extraction zones')
-        st.stop()
+        if not zones_type:
+            st.error('Please specify extraction zones type')
+            st.stop()
+        if not zone_file:
+            st.error('Please specify extraction zones file')
+            st.stop()
+        if not description:
+            st.error('Please specify extraction zones description')
+            st.stop()
+        if not fid_field:
+            st.error('Please specify the unique identifier field')
+            st.stop()
+        if not author:
+            st.error('Please specify the author of the extraction zones')
+            st.stop()
 
-    try:
-        uploaded_gdf = gpd.read_file(zone_file.read())
-        uploaded_gdf.to_crs(epsg=3857, inplace=True)
-    except:
-        st.error("Unable to read and project your vector file.")
-        st.stop()
+        try:
+            uploaded_gdf = gpd.read_file(zone_file.read())
+            uploaded_gdf.to_crs(epsg=3857, inplace=True)
+        except:
+            st.error("Unable to read and project your vector file.")
+            st.stop()
 
-    with st.spinner("Uploading..."):
-        aoi = uploaded_gdf[["geometry"]].dissolve()
-        aoi["geometry"] = aoi.simplify(10)
-        aoi['author'] = author
-        aoi['type'] = zones_type
-        aoi['description'] = description
-        uploaded_gdf["geometry"] = uploaded_gdf.simplify(10)
-        uploaded_gdf['zone_fid'] = uploaded_gdf[fid_field]
+        with st.spinner("Uploading..."):
+            aoi = uploaded_gdf[["geometry"]].dissolve()
+            aoi["geometry"] = aoi.simplify(10)
+            aoi['author'] = author
+            aoi['type'] = zones_type
+            aoi['description'] = description
+            uploaded_gdf["geometry"] = uploaded_gdf.simplify(10)
+            uploaded_gdf['zone_fid'] = uploaded_gdf[fid_field]
 
-        aoi.to_postgis(name='aoi', con=conn.connect(), if_exists='append')
+            aoi.to_postgis(name='aoi', con=conn.connect(), if_exists='append')
 
-        df = conn.query('select * from aoi where author=:author and type=:type and description=:description order by last_access desc limit 1',
-                params={
-                    "author": author,
-                    "type": zones_type,
-                    "description": description
-                }, ttl=5)
-        aoi_fid = df.loc[0]['fid']
+            df = conn.query('select * from aoi where author=:author and type=:type and description=:description order by last_access desc limit 1',
+                    params={
+                        "author": author,
+                        "type": zones_type,
+                        "description": description
+                    }, ttl=5)
+            aoi_fid = df.loc[0]['fid']
 
-        uploaded_gdf['aoi_fid'] = aoi_fid
-        zones = uploaded_gdf[["aoi_fid", "zone_fid", "geometry"]]
+            uploaded_gdf['aoi_fid'] = aoi_fid
+            zones = uploaded_gdf[["aoi_fid", "zone_fid", "geometry"]]
 
-        zones.to_postgis(name='zone', con=conn.connect(), if_exists='append')
+            zones.to_postgis(name='zone', con=conn.connect(), if_exists='append')
 
-        st.rerun()
+            st.rerun(scope="app")
+
+new_zones_form()

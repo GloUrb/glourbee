@@ -38,7 +38,7 @@ class ProcessImage(Thread):
         
 
 st.header('Metrics extraction', divider=True)
-st.info('This module extracts the statistical distribution of each indicator and calculated mask by Google Earth Engine (GEE) at the scale of each extraction zone. ' \
+st.info('This module extracts the statistical distribution of each indice and calculated mask by Google Earth Engine (GEE) at the scale of each extraction zone. ' \
 'The output format is a the GloUrbEE metrics dataframe.')
 
 if "selected_aoi" not in st.session_state.keys() or not st.session_state['selected_aoi']:

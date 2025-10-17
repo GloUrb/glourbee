@@ -11,7 +11,7 @@ from glourbee.worker import gee_process, upload_archive
 conn = st.connection("postgresql", "sql", url=os.environ['GLOURBEE_DB_URI'])
 
 st.header('Google Earth Engine processing', divider=True)
-st.info('This module allows programming the calculation of indicators and masks used for the GloUrb project, and initiating the download of data from Google Earth Engine to this GloUrbEE server.')
+st.info('This module allows programming the calculation of indices and masks used for the GloUrb project, and initiating the download of data from Google Earth Engine to this GloUrbEE server.')
 
 if "selected_aoi" not in st.session_state.keys() or not st.session_state['selected_aoi']:
     st.page_link(page='extraction.py', label='Please select extraction zones before', icon="🌍")
@@ -84,63 +84,67 @@ with st.popover('Download data corresponding to blue footprints', disabled=len(s
         st.rerun()
 
 st.title("Start new data calculation and download")
-st.info('Here, you can launch the calculation of masks and indicators for new images using Google Earth Engine. Please note that changing something from the default cloud and masks parameters will make the calculated data only available for you (not the other users) and for 1 month long instead of 6.')
+st.info('Here, you can launch the calculation of masks and indices for new images using Google Earth Engine. Please note that changing something from the default cloud and masks parameters will make the calculated data only available for you (not the other users) and for 1 month long instead of 6.')
 
-form = st.container(border=1)
-form_daterange = form.date_input('Calculated date range', value=("2025-01-01", "2025-01-31"), min_value="1980-01-01", max_value="today")
+@st.fragment
+def new_data_form():
+    form = st.container(border=1)
+    form_daterange = form.date_input('Calculated date range', value=("2025-01-01", "2025-01-31"), min_value="1980-01-01", max_value="today")
 
-col1, col2 = form.columns(2)
-cloud_filter= col1.slider('Cloud filter', min_value= 0, max_value= 100, value = 80, help="Maximum cloud coverage accepted at the image scale")
-cloud_masking = col1.toggle('Cloud masking', value = True, help="Mask the clouds on the results (recommended)")
+    col1, col2 = form.columns(2)
+    cloud_filter= col1.slider('Cloud filter', min_value= 0, max_value= 100, value = 80, help="Maximum cloud coverage accepted at the image scale")
+    cloud_masking = col1.toggle('Cloud masking', value = True, help="Mask the clouds on the results (recommended)")
 
-satellite_type = col2.radio('Satellite imagery dataset', 
-                            options=['Landsat', 'Sentinel-2'], 
-                            captions = ['Data available since 1982-08-22', 'Data available since 2017-03-28'])
+    satellite_type = col2.radio('Satellite imagery dataset', 
+                                options=['Landsat', 'Sentinel-2'], 
+                                captions = ['Data available since 1982-08-22', 'Data available since 2017-03-28'])
 
-email = form.text_input("Email notification (optional)", value=None, help="Get an email notification when your process is completed")
-    
-ct = form.container(border=1)
-ct.write('Advanced options')
+    email = form.text_input("Email notification (optional)", value=None, help="Get an email notification when your process is completed")
+        
+    ct = form.container(border=1)
+    ct.write('Advanced options')
 
-if satellite_type == "Landsat":
-    default_water = "MNDWI > 0.0"
-    default_ac = "MNDWI > -0.4 && NDVI < 0.2"
-    default_veget = "NDVI > 0.15"
+    if satellite_type == "Landsat":
+        default_water = "MNDWI > 0.0"
+        default_ac = "MNDWI > -0.4 && NDVI < 0.2"
+        default_veget = "NDVI > 0.15"
 
-elif satellite_type == "Sentinel-2":
-    default_water = "NDWI > -0.1"
-    default_ac = "NDWI > -0.4 && NDVI < 0.2"
-    default_veget = "NDVI > 0.15"
+    elif satellite_type == "Sentinel-2":
+        default_water = "NDWI > -0.1"
+        default_ac = "NDWI > -0.4 && NDVI < 0.2"
+        default_veget = "NDVI > 0.15"
 
-watermask_expression = ct.text_input('Watermask expression', value=default_water)
-activechannel_expression = ct.text_input('Active Channel expression', value=default_ac)
-vegetation_expression = ct.text_input('Vegetation expression', value=default_veget)
+    watermask_expression = ct.text_input('Watermask expression', value=default_water)
+    activechannel_expression = ct.text_input('Active Channel expression', value=default_ac)
+    vegetation_expression = ct.text_input('Vegetation expression', value=default_veget)
 
-if (
-        cloud_filter != 80 or
-        not cloud_masking or
-        watermask_expression != default_water or
-        activechannel_expression != default_ac or
-        vegetation_expression != default_veget
-    ):
-    user = st.session_state['user']['name']
-else:
-    user = 'all'
+    if (
+            cloud_filter != 80 or
+            not cloud_masking or
+            watermask_expression != default_water or
+            activechannel_expression != default_ac or
+            vegetation_expression != default_veget
+        ):
+        user = st.session_state['user']['name']
+    else:
+        user = 'all'
 
-if form.button("Start tasks"):
-    with st.spinner('Starting tasks...'):
-        gee_process.delay(
-            aoi_fid=int(st.session_state['selected_aoi']),
-            date_range=(str(form_daterange[0]), str(form_daterange[1])),
-            cloud_filter=cloud_filter,
-            cloud_masking=cloud_masking,
-            satellite_type=satellite_type,
-            watermask_expression=watermask_expression,
-            activechannel_expression=activechannel_expression,
-            vegetation_expression=vegetation_expression,
-            user=user,
-            email_notif=email
-        )
-    
-    st.balloons()
-    st.toast('Tasks started. Check your task manager to track progress', icon='🚀')
+    if form.button("Start tasks"):
+        with st.spinner('Starting tasks...'):
+            gee_process.delay(
+                aoi_fid=int(st.session_state['selected_aoi']),
+                date_range=(str(form_daterange[0]), str(form_daterange[1])),
+                cloud_filter=cloud_filter,
+                cloud_masking=cloud_masking,
+                satellite_type=satellite_type,
+                watermask_expression=watermask_expression,
+                activechannel_expression=activechannel_expression,
+                vegetation_expression=vegetation_expression,
+                user=user,
+                email_notif=email
+            )
+        
+        st.balloons()
+        st.toast('Tasks started. Check your task manager to track progress', icon='🚀')
+
+new_data_form()
