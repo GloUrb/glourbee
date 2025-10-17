@@ -85,7 +85,18 @@ def gee_process(aoi_fid: int,
                                                                                               collection.aggregate_array('system:time_start').getInfo())]
 
     if len(collection_images) == 0:
-        message = "No image found in this time range"
+        message = f"No image found in this time range\n\
+            aoi_fid={aoi_fid}\n\
+            date_range={date_range}\n\
+            cloud_filter={cloud_filter}\n\
+            cloud_masking={cloud_masking}\n\
+            satellite_type={satellite_type}\n\
+            watermask_expression={watermask_expression}\n\
+            activechannel_expression={activechannel_expression}\n\
+            vegetation_expression={vegetation_expression}\n\
+            user={user}\n\
+            email_notif={email_notif}"
+        
         if email_notif:
             email_notification(email_notif, message, success=False)
         return message
@@ -96,7 +107,18 @@ def gee_process(aoi_fid: int,
     new_images = [n for n in collection_images if n[0] not in list(matching_local["name"])]
 
     if len(new_images) == 0:
-        message = "No new image to download"
+        message = f"No new image to download\n\
+            aoi_fid={aoi_fid}\n\
+            date_range={date_range}\n\
+            cloud_filter={cloud_filter}\n\
+            cloud_masking={cloud_masking}\n\
+            satellite_type={satellite_type}\n\
+            watermask_expression={watermask_expression}\n\
+            activechannel_expression={activechannel_expression}\n\
+            vegetation_expression={vegetation_expression}\n\
+            user={user}\n\
+            email_notif={email_notif}"
+        
         if email_notif:
             email_notification(email_notif, message, success=False)
         return message
@@ -188,7 +210,18 @@ def gee_process(aoi_fid: int,
 
         return message
 
-    message = f'{len(new_images_gdf)} images processed'
+    message = f'{len(new_images_gdf)} images processed\n\
+            aoi_fid={aoi_fid}\n\
+            date_range={date_range}\n\
+            cloud_filter={cloud_filter}\n\
+            cloud_masking={cloud_masking}\n\
+            satellite_type={satellite_type}\n\
+            watermask_expression={watermask_expression}\n\
+            activechannel_expression={activechannel_expression}\n\
+            vegetation_expression={vegetation_expression}\n\
+            user={user}\n\
+            email_notif={email_notif}'
+    
     if email_notif:
         email_notification(email_notif, message, success=True)
     return message
