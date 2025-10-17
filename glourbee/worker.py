@@ -19,7 +19,7 @@ app = Celery('glourbee-worker',
              broker=os.environ['GLOURBEE_BROKER_URL'],
              backend=os.environ['GLOURBEE_BROKER_URL'])
 
-engine = create_engine(os.environ['GLOURBEE_DB_URI'])
+engine = create_engine(os.environ['GLOURBEE_DB_URI'], pool_pre_ping=True)
 
 
 def email_notification(email: str, message: str, success: bool=True):
