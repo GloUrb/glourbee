@@ -7,7 +7,7 @@ secondaryBackgroundColor="#cbeac7"
 level = 'info'
 
 [client]
-showErrorDetails = "none"
+showErrorDetails = "full"
 toolbarMode = "auto"
 
 [runner]

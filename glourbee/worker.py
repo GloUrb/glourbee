@@ -1,6 +1,7 @@
 import os
 import ee
 import geemap
+import pandas as pd
 import geopandas as gpd
 import json
 import smtplib
@@ -13,11 +14,21 @@ from email.mime.text import MIMEText
 from datetime import datetime
 from sqlalchemy import text, create_engine, bindparam
 from celery import Celery
+from celery.schedules import crontab
 from shapely.geometry import shape, Polygon
 
 app = Celery('glourbee-worker', 
              broker=os.environ['GLOURBEE_BROKER_URL'],
              backend=os.environ['GLOURBEE_BROKER_URL'])
+app.conf.update(
+    timezone='Europe/Paris',
+    beat_schedule={
+        'prune-every-30min': {
+            'task': 'tasks.prune',
+            'schedule': crontab(minute='*/30'),
+        },
+    }
+)
 
 engine = create_engine(os.environ['GLOURBEE_DB_URI'], pool_pre_ping=True)
 
@@ -236,7 +247,11 @@ def upload_archive(images: list[str], email: str):
 
     size_mo = sum([os.path.getsize(f) for f in images])/1000000
     
-    assert size_mo < 20000
+    if size_mo > 20000:
+        message = f"Requested archive is too big ({size_mo} Mo). Maximum size is 20000 Mo"
+        email_notification(email, message, success=False)
+
+        return
 
     with NamedTemporaryFile(suffix='.zip') as tmp:
 
@@ -254,3 +269,29 @@ def upload_archive(images: list[str], email: str):
               "-r", email,
               tmp.name])
         
+
+@app.task
+def prune():
+    """
+    Prune orphans and old images on the GloUrbEE server
+    """
+
+    # Check if there is failed processes
+    i = app.control.inspect()
+
+    workers_data = list()
+    for tasks in [i.active(), i.reserved()]:
+        for worker in tasks:
+            workers_data.append(pd.DataFrame(tasks[worker]))
+    tasks_df = pd.concat(workers_data)
+
+    if len(tasks_df) == 0:
+        with engine.connect() as con:
+            sql = text('select "user","name" from image where path is null')
+            orphans = con.execute(sql)
+        
+        for img in orphans:
+            img_path = os.path.join(os.environ['GLOURBEE_DATASTORE'], img[0], f'{img[1]}.tif')
+
+            if os.path.isfile(img_path):
+                os.remove(img_path)
