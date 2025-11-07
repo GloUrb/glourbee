@@ -289,7 +289,11 @@ def prune():
         with engine.connect() as con:
             sql = text('select "user","name" from image where path is null')
             orphans = con.execute(sql)
-        
+
+            sql = text('delete from image where path is null')
+            con.execute(sql)
+            con.commit()
+
         for img in orphans:
             img_path = os.path.join(os.environ['GLOURBEE_DATASTORE'], img[0], f'{img[1]}.tif')
 
