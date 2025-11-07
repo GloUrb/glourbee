@@ -134,7 +134,7 @@ def gee_process(aoi_fid: int,
     sql = text('select * from image where name in :col and "user"=:user and path is null').bindparams(bindparam('col', expanding=True), bindparam('user'))
     new_images_gdf = gpd.read_postgis(sql, con=engine, params={'col': list(new_images_gdf['name']), 'user': user}, crs=3857, geom_col="geometry")
 
-    output_dir = os.path.join(os.environ['GLOURBEE_DATASTORE'], 'all')
+    output_dir = os.path.join(os.environ['GLOURBEE_DATASTORE'], user)
     os.makedirs(output_dir, exist_ok=True)
     
     try:
