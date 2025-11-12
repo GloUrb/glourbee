@@ -1,5 +1,4 @@
 import os
-import re
 import streamlit as st
 import geopandas as gpd
 import leafmap.foliumap as leafmap
@@ -64,24 +63,6 @@ if len(zone_db) > 0:
 
 # Affichage de la carte
 m.to_streamlit()
-
-# Bouton de téléchargement si sélection pas vide
-with st.popover('Download data corresponding to blue footprints', disabled=len(st.session_state['selected_images'])==0):
-    st.write("Creating the archive may take some time. An email with a FileSender link will be sent to you once the archive is ready. Please do not initiate the creation of multiple archives simultaneously.")
-    dest = st.text_input('Email', help="The email address where the download link will be send")
-    if st.button('Create archive'):
-        
-        try:
-            assert re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', dest)
-        except AssertionError:
-            st.error('Invalid email format')
-
-        upload_archive.delay(list(st.session_state['selected_images']['path']), dest)
-
-        st.balloons()
-        st.success('Archive creation successfully started')
-        sleep(2)
-        st.rerun()
 
 st.title("Start new data calculation and download")
 st.info('Here, you can launch the calculation of masks and indices for new images using Google Earth Engine. Please note that changing something from the default cloud and masks parameters will make the calculated data only available for you (not the other users) and for 1 month long instead of 6.')

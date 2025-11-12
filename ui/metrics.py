@@ -14,7 +14,6 @@ from glourbee import zones_metrics
 
 conn = st.connection("postgresql", "sql", url=os.environ['GLOURBEE_DB_URI'])
 
-import time
 class ProcessImage(Thread):
     def __init__(self, img_subset, zone_db):
         super().__init__()

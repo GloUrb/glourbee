@@ -11,8 +11,13 @@ services:
       - GLOURBEE_DATASTORE=$GLOURBEE_DATASTORE
       - GLOURBEE_BROKER_URL=$GLOURBEE_BROKER_URL
       - GLOURBEE_DB_URI=$GLOURBEE_DB_URI
+      - WEBDAV_USER=$WEBDAV_USER
+      - WEBDAV_PASSWORD=$WEBDAV_PASSWORD
+      - WEBDAV_URL=$WEBDAV_URL
     volumes:
       - data:/data
+      - ./glourbee:/app/glourbee # dev only
+      - ./ui:/app/ui # dev only
 
   worker:
     image: ghcr.io/glourb/glourbee-ui:latest
@@ -30,14 +35,34 @@ services:
       - GLOURBEE_EMAIL_PORT=$GLOURBEE_EMAIL_PORT
       - GLOURBEE_EMAIL_USER=$GLOURBEE_EMAIL_USER
       - GLOURBEE_EMAIL_PASSWORD=$GLOURBEE_EMAIL_PASSWORD
+      - GLOURBEE_EE_JSONKEY=$GLOURBEE_EE_JSONKEY
       - FILESENDER_SCRIPT=$FILESENDER_SCRIPT
       - FILESENDER_BASE_URL=$FILESENDER_BASE_URL
       - FILESENDER_USERNAME=$FILESENDER_USERNAME
       - FILESENDER_APIKEY=$FILESENDER_APIKEY
       - FILESENDER_FROM=$FILESENDER_FROM
+    healthcheck: 
+        test: ["CMD-SHELL", "celery -A glourbee.worker inspect ping --destination celery@$$HOSTNAME"]
+        interval: 30s
+        timeout: 10s
+        retries: 5
+        start_period: 5s
     volumes:
       - data:/data
       - ./ee-glourb-718927cf3d80.json:/app/earthengine-key.json:ro
+      - ./glourbee:/app/glourbee # dev only
+
+  webdav:
+    image: ghcr.io/hacdias/webdav:latest
+    restart: always
+    ports: 
+      - "6060:6060"
+    volumes:
+      - data:/data
+      - ./webdav-config.yml:/config.yml:ro
+    environment:
+      - WEBDAV_USER=$WEBDAV_USER
+      - WEBDAV_PASSWORD=$WEBDAV_PASSWORD
 
   broker:
     image: redis:latest

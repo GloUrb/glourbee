@@ -16,7 +16,6 @@ RUN apt-get update && apt-get install -y \
 COPY ./glourbee ./glourbee
 COPY ./pyproject.toml ./pyproject.toml
 COPY ./ui ./ui
-COPY ./filesender ./filesender
 COPY ./alembic ./alembic
 COPY ./alembic.ini ./alembic.ini
 COPY ./requirements.txt ./requirements.txt

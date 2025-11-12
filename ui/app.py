@@ -1,8 +1,5 @@
 # -*- coding: utf-8 -*-
 
-"""Home Page of the Interface
-"""
-
 import streamlit as st
 import json
 import ee
@@ -11,8 +8,9 @@ from alembic.config import Config
 from alembic import command
 from glourbee import __version__ as glourbee_version
 
-st.set_page_config(layout="wide")
+### STREAMLIT FRONT
 
+st.set_page_config(layout="wide")
 
 @st.cache_resource
 def run_migrations():
@@ -79,6 +77,7 @@ pg = st.navigation([
         st.Page("home.py", title="Home page", icon="🏠"),
         st.Page("extraction.py", title="Extraction zones", icon="🌍"), 
         st.Page('gee.py', title="GEE processing", icon="☁️"),
+        st.Page('files.py', title="Explore and download results", icon="📂"),
         st.Page("metrics.py", title="Metrics calculation", icon="📈"),
         st.Page("local.py", title="Local adjustments", icon="🖥️"),
         st.Page("tasks.py", title="Tasks manager", icon="📋")
