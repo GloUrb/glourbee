@@ -3,9 +3,8 @@ import streamlit as st
 import geopandas as gpd
 import leafmap.foliumap as leafmap
 
-from time import sleep
 from sqlalchemy import text
-from glourbee.worker import gee_process, upload_archive
+from glourbee.worker import gee_process
 
 conn = st.connection("postgresql", "sql", url=os.environ['GLOURBEE_DB_URI'])
 

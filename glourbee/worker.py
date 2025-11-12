@@ -7,15 +7,13 @@ import json
 import smtplib
 import re
 
-from subprocess import call
-from tempfile import NamedTemporaryFile
-from zipfile import ZipFile
 from email.mime.text import MIMEText
 from datetime import datetime
 from sqlalchemy import text, create_engine, bindparam
 from celery import Celery
 from celery.schedules import crontab
 from shapely.geometry import shape, Polygon
+from glourbee import zones_metrics
 
 app = Celery('glourbee-worker', 
              broker=os.environ['GLOURBEE_BROKER_URL'],
@@ -239,36 +237,37 @@ def gee_process(aoi_fid: int,
 
 
 @app.task
-def upload_archive(images: list[str], email: str):
+def calculate_metrics(image: int, aoi: int) -> pd.DataFrame:
 
-    assert re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email)
-    for f in images:
-        assert os.path.isfile(f)
+    sql = text("select * from image where fid=:image").bindparams(bindparam("image"))
+    image = gpd.read_postgis(sql, con=engine, params={'image': image}, crs=3857, geom_col="geometry").iloc[0]
 
-    size_mo = sum([os.path.getsize(f) for f in images])/1000000
+    sql = text("select * from zone where aoi_fid=:aoi").bindparams(bindparam("aoi"))
+    zones = gpd.read_postgis(sql, con=engine, params={'aoi': aoi}, crs=3857, geom_col="geometry")
+
+    zones = zones[zones.intersects(image.geometry)]
+    zones['image'] = image['name']
+    zones['date'] = str(image['date'])
+    zones['satellite'] = image['satellite']
+
+    metrics: pd.DataFrame = zones.apply(lambda row: zones_metrics.calculcateZONEsMetricsLocal(image['path'], row['geometry']), axis=1, result_type='expand')
+    zones = pd.concat([zones, metrics], axis=1)
+
+    zones = zones.drop('geometry', axis='columns')
     
-    if size_mo > 20000:
-        message = f"Requested archive is too big ({size_mo} Mo). Maximum size is 20000 Mo"
-        email_notification(email, message, success=False)
+    return zones.to_json()
 
-        return
 
-    with NamedTemporaryFile(suffix='.zip') as tmp:
+@app.task
+def aggregate_metrics(results, output_csv: str, email_notif: str):
 
-        with ZipFile(tmp.name, 'w') as archive:
-            for f in images:
-                archive.write(f)
+    dfs = [pd.read_json(r) for r in results]
+    final_df = pd.concat(dfs, ignore_index=True)
+    final_df.to_csv(output_csv, index=False)
 
-        call(['python', os.environ['FILESENDER_SCRIPT'], 
-              "-b", os.environ['FILESENDER_BASE_URL'],
-              "-u", os.environ['FILESENDER_USERNAME'],
-              "-a", os.environ['FILESENDER_APIKEY'],
-              "-f", os.environ["FILESENDER_FROM"],
-              "-s", "GloUrbEE archive",
-              "-m", "This archive contains the images you selected in GloUrbEE-UI",
-              "-r", email,
-              tmp.name])
-        
+    message = f"Metrics calculation complete. You can retrieve your file from the GloUrbEE server at the following location: {output_csv}"
+    email_notification(email_notif, message=message, success=True)
+
 
 @app.task
 def prune():

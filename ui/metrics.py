@@ -2,39 +2,14 @@
 """
 import streamlit as st
 import os
-import pandas as pd
 import geopandas as gpd
-import numpy as np
+import time
 
-from time import sleep
-from multiprocessing import cpu_count
-from threading import Thread
+from celery import chord
 from sqlalchemy import text
-from glourbee import zones_metrics
+from glourbee.worker import calculate_metrics, aggregate_metrics
 
 conn = st.connection("postgresql", "sql", url=os.environ['GLOURBEE_DB_URI'])
-
-class ProcessImage(Thread):
-    def __init__(self, img_subset, zone_db):
-        super().__init__()
-        self.img_subset = pd.DataFrame(img_subset)
-        self.zone_db = zone_db
-        self.return_value = list()
-
-    def run(self):
-        for _, i in self.img_subset.iterrows():
-            local_zones = self.zone_db[self.zone_db.intersects(i.geometry)]
-            local_zones['image'] = i['name']
-            local_zones['date'] = i['date']
-            local_zones['satellite'] = i['satellite']
-
-            r = local_zones.apply(lambda row: zones_metrics.calculcateZONEsMetricsLocal(i['path'], row['geometry']), axis=1, result_type='expand')
-            local_zones = pd.concat([local_zones, r], axis=1)
-
-            self.return_value.append(local_zones.drop(['fid', 'geometry'], axis=1))
-
-        self.return_value = pd.concat(self.return_value)
-        
 
 st.header('Metrics extraction', divider=True)
 st.info('This module extracts the statistical distribution of each indice and calculated mask by Google Earth Engine (GEE) at the scale of each extraction zone. ' \
@@ -54,32 +29,19 @@ zone_db: gpd.GeoDataFrame = gpd.read_postgis(text("select * from zone where aoi_
 st.write(f'Metrics will be extracted on **{len(zone_db)}** extraction zones over **{len(st.session_state['selected_images'])}** satellite images \
          from **{min(st.session_state['selected_images']['date'])}** to **{max(st.session_state['selected_images']['date'])}**')
 
-@st.cache_data
-def convert_for_download(df):
-    return df.to_csv().encode("utf-8")
-    
-if st.button('Start extraction'):
+with st.form('calculate_metrics'):
+    email = st.text_input("Email notification", value=None, help="Get an email notification when your process is completed")
 
-    nproc = int(cpu_count()/2) if int(cpu_count()/2) < len(st.session_state['selected_images']) else len(st.session_state['selected_images'])
+    if st.form_submit_button('Start extraction'):
 
-    progress = st.progress(0, text='Metrics extraction (started)')
-    subsets = np.array_split(st.session_state['selected_images'], nproc)
+        output_csv = os.path.join(os.environ['GLOURBEE_DATASTORE'], 
+                                  'metrics', 
+                                  f'{st.session_state['user']['name']}_{time.strftime("%Y%m%d-%H%M%S")}.csv')
+        os.makedirs(os.path.dirname(output_csv), exist_ok=True)
 
-    threads = [ProcessImage(img_subset, zone_db) for img_subset in subsets]
-    for thread in threads:
-        thread.start()
+        header = [calculate_metrics.s(int(i), int(st.session_state['selected_aoi'])) for i in list(st.session_state['selected_images']['fid'])]
+        callback = aggregate_metrics.s(output_csv, email)
+        chord(header)(callback)
 
-    thread_alive = [t.is_alive() for t in threads]
-    while any(thread_alive):
-        thread_alive = [t.is_alive() for t in threads]
-        p = sum([not alive for alive in thread_alive])/len(thread_alive)
-
-        progress.progress(p, text=f"Metrics extraction ({int(p*100)}%)")
-        sleep(0.5)
-
-    output_metrics = pd.concat([t.return_value for t in threads])
-
-    csv = convert_for_download(output_metrics)
-    st.download_button('Download CSV', csv, file_name=f"glourbee_metrics_{st.session_state["selected_aoi"]}.csv", mime="text/csv", icon=":material/download:")
-
-    st.dataframe(output_metrics)
+        st.balloons()
+        st.toast('Tasks started. You will receive an email when your metrics are ready', icon='🚀')
