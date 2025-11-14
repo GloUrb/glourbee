@@ -6,6 +6,7 @@ import geopandas as gpd
 import json
 import smtplib
 import re
+import uuid
 
 from email.mime.text import MIMEText
 from datetime import datetime
@@ -239,6 +240,9 @@ def gee_process(aoi_fid: int,
 @app.task
 def calculate_metrics(image: int, aoi: int) -> pd.DataFrame:
 
+    os.makedirs(os.path.join(os.environ['GLOURBEE_DATASTORE'], 'tmp'), exist_ok=True)
+    csv_path = os.path.join(os.environ['GLOURBEE_DATASTORE'], 'tmp', f'{image}_{aoi}_{uuid.uuid4()}.csv')
+
     sql = text("select * from image where fid=:image").bindparams(bindparam("image"))
     image = gpd.read_postgis(sql, con=engine, params={'image': image}, crs=3857, geom_col="geometry").iloc[0]
 
@@ -254,19 +258,24 @@ def calculate_metrics(image: int, aoi: int) -> pd.DataFrame:
     zones = pd.concat([zones, metrics], axis=1)
 
     zones = zones.drop('geometry', axis='columns')
+    zones.to_csv(csv_path)
     
-    return zones.to_json()
+    return csv_path
 
 
 @app.task
 def aggregate_metrics(results, output_csv: str, email_notif: str):
 
-    dfs = [pd.read_json(r) for r in results]
+    dfs = [pd.read_csv(r) for r in results]
     final_df = pd.concat(dfs, ignore_index=True)
     final_df.to_csv(output_csv, index=False)
 
-    message = f"Metrics calculation complete. You can retrieve your file from the GloUrbEE server at the following location: {output_csv}"
-    email_notification(email_notif, message=message, success=True)
+    for r in results:
+        os.remove(r)
+
+    if email_notif:
+        message = f"Metrics calculation complete. You can retrieve your file from the GloUrbEE server at the following location: {output_csv}"
+        email_notification(email_notif, message=message, success=True)
 
 
 @app.task

@@ -27,7 +27,7 @@ RUN --mount=source=.git,target=.git,type=bind \
 
 EXPOSE 8501
 
-HEALTHCHECK CMD curl --fail http://localhost:8501/_stcore/health
+HEALTHCHECK --start-period=5s CMD curl --fail http://localhost:8501/_stcore/health
 
 # Creates a non-root user with an explicit UID and adds permission to access the /app folder
 RUN adduser -u 5678 --disabled-password --gecos "" glourbee && chown -R glourbee /app
