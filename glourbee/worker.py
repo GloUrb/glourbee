@@ -7,6 +7,7 @@ import json
 import smtplib
 import re
 import uuid
+import shutil
 
 from email.mime.text import MIMEText
 from datetime import datetime
@@ -23,7 +24,7 @@ app.conf.update(
     timezone='Europe/Paris',
     beat_schedule={
         'prune-every-30min': {
-            'task': 'tasks.prune',
+            'task': 'glourbee.worker.prune',
             'schedule': crontab(minute='*/30'),
         },
     }
@@ -307,3 +308,6 @@ def prune():
 
             if os.path.isfile(img_path):
                 os.remove(img_path)
+
+        if os.path.isdir(os.path.join(os.environ['GLOURBEE_DATASTORE'], 'tmp')):
+            shutil.rmtree(os.path.join(os.environ['GLOURBEE_DATASTORE'], 'tmp'))

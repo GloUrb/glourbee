@@ -25,7 +25,7 @@ services:
     depends_on:
       - broker
       - db
-    command: [celery, -A, glourbee.worker, worker, -c, "1", -l, INFO]
+    command: [celery, -A, glourbee.worker, worker, -B, -c, "1", -l, INFO]
     environment:
       - GLOURBEE_DATASTORE=$GLOURBEE_DATASTORE
       - GLOURBEE_BROKER_URL=$GLOURBEE_BROKER_URL

@@ -38,12 +38,15 @@ def list_tasks(tasks):
 
 st.title("Active tasks")
 st.write("Tasks currently executed on workers")
-list_tasks(active_tasks)
+# list_tasks(active_tasks)
+st.json(active_tasks)
 
 st.title("Tasks in queue")
 st.write("Tasks that have been received, but are still waiting for a slot on a worker to be executed")
-list_tasks(reserved_tasks)
+# list_tasks(reserved_tasks)
+st.json(reserved_tasks)
 
 st.title("Scheduled tasks")
 st.write("Tasks executed periodically (prune old images and failed processes)")
-scheduled_tasks
+# scheduled_tasks
+st.json(scheduled_tasks)
