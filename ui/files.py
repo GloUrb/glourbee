@@ -1,13 +1,13 @@
 import os
 import streamlit as st
 
-
 st.header('Explore and download results', divider=True)
-st.info('This module explain how to explore images and masks calculated on GEE and downloaded to this GloUrbEE server.')
 
-st.write('You can access the GloUrbEE files using the WebDAV protocol. Check the instructions for your specific OS below.')
-st.title('Windows instructions')
+st.link_button("Access the GloUrbEE File Explorer", os.environ["FILES_URL"])
+st.write(f'''
+         Login with the following credentials:
+         - Username: `{os.environ["FILES_USER"]}`
+         - Password: `{os.environ["FILES_PASSWORD"]}`
+         ''')
 
-st.title('Ubuntu/Debian instructions')
-
-st.write(f'Open your file explorer, and go to davfs://{os.environ["WEBDAV_URL"]}. The username is {os.environ["WEBDAV_USER"]}, and the password {os.environ["WEBDAV_PASSWORD"]}')
+st.write(f"You can also access the GloUrbeEE File Server from FileZilla with the SFTP protocol, using the same user and password with the host `{os.environ["SFTP_HOST"]}` and port `{os.environ["SFTP_PORT"]}`.")

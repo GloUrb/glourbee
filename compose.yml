@@ -11,9 +11,11 @@ services:
       - GLOURBEE_DATASTORE=$GLOURBEE_DATASTORE
       - GLOURBEE_BROKER_URL=$GLOURBEE_BROKER_URL
       - GLOURBEE_DB_URI=$GLOURBEE_DB_URI
-      - WEBDAV_USER=$WEBDAV_USER
-      - WEBDAV_PASSWORD=$WEBDAV_PASSWORD
-      - WEBDAV_URL=$WEBDAV_URL
+      - FILES_USER=$FILES_USER
+      - FILES_PASSWORD=$FILES_PASSWORD
+      - FILES_URL=$FILES_URL
+      - SFTP_HOST=$SFTP_HOST
+      - SFTP_PORT=$SFTP_PORT
     volumes:
       - data:/data
       - ./glourbee:/app/glourbee # dev only
@@ -47,17 +49,18 @@ services:
       - ./ee-glourb-718927cf3d80.json:/app/earthengine-key.json:ro
       - ./glourbee:/app/glourbee # dev only
 
-  webdav:
-    image: ghcr.io/hacdias/webdav:latest
+  files:
+    image: registry.sftpgo.com/sftpgo/sftpgo:v2.7.20251107
     restart: always
     ports: 
-      - "6060:6060"
+      - "8080:8080"
+      - "$SFTP_PORT:2022"
     volumes:
-      - data:/data
-      - ./webdav-config.yml:/config.yml:ro
+      - data:/data:ro
+      - sftpgo-data:/srv/sftpgo
+      - sftpgo-home:/var/lib/sftpgo
     environment:
-      - WEBDAV_USER=$WEBDAV_USER
-      - WEBDAV_PASSWORD=$WEBDAV_PASSWORD
+      - SFTPGO_COMMON__DEFENDER__ENABLED=true
 
   broker:
     image: redis:latest
@@ -79,3 +82,5 @@ services:
 volumes:
   data:
   db-data:
+  sftpgo-data:
+  sftpgo-home:
