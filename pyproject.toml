@@ -15,6 +15,5 @@ authors = [
 ]
 description = "Use GEE to extract metrics on river corridors DGOs. This project is part of the GloUrb ANR."
 readme = "README.md"
-license-files = ["LICENSE"]
 dynamic = ["version", "dependencies"]
 requires-python = ">=3.10"

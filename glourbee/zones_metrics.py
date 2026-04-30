@@ -286,6 +286,8 @@ def calculcateZONEsMetricsLocal(image_path: str, zone: MultiPolygon | Polygon) -
 
         band_mapping = dict([(name, i) for i, name in zip(range(1,len(src.descriptions)+1), src.descriptions)])
 
+        metrics['PXL_SURFACE'] = float(abs(src.profile['transform'].a) * abs(src.profile['transform'].e))
+
         for i in ['MNDWI', 'NDVI', 'NDWI', 'BSI']:
             indic_image, _ = mask(src, [zone], crop=True, filled=True, nodata=-np.inf, indexes=band_mapping[i])
             indic_image[np.where(indic_image==-np.inf)] = np.nan
@@ -299,10 +301,11 @@ def calculcateZONEsMetricsLocal(image_path: str, zone: MultiPolygon | Polygon) -
         for c in ['CLOUDS', 'WATER', 'VEGETATION', 'AC']:
 
             image, _ = mask(src, [zone], crop=True, filled=True, nodata=-np.inf, indexes=band_mapping[c])
-            image[np.where(image==-np.inf)] = 255
-
+            
             if c == 'CLOUDS':
-                metrics['ZONE_AREA'] = np.sum(np.where(image!=255))
+                metrics['ZONE_AREA'] = np.sum(image >= 0)
+
+            image[np.where(image==-np.inf)] = 255
 
             labels = measure.label(image, background=255, connectivity=2).astype(np.uint8)
             metrics[f'{c}_POLYGONS_COUNT'] = int(np.max(labels))

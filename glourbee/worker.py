@@ -8,6 +8,10 @@ import smtplib
 import re
 import uuid
 import shutil
+import rasterio as rio
+from rasterio.warp import calculate_default_transform, reproject, Resampling
+from pyproj import Transformer
+
 
 from email.mime.text import MIMEText
 from datetime import datetime
@@ -17,9 +21,14 @@ from celery.schedules import crontab
 from shapely.geometry import shape, Polygon
 from glourbee import zones_metrics
 
-app = Celery('glourbee-worker', 
-             broker=os.environ['GLOURBEE_BROKER_URL'],
-             backend=os.environ['GLOURBEE_BROKER_URL'])
+app = Celery('glourbee-downloader', 
+             broker=os.environ['GLOURBEE_DL_BROKER_URL'],
+             backend=os.environ['GLOURBEE_DL_BROKER_URL'])
+
+wrk = Celery('glourbee-worker', 
+             broker=os.environ['GLOURBEE_WRK_BROKER_URL'],
+             backend=os.environ['GLOURBEE_WRK_BROKER_URL'])
+
 app.conf.update(
     timezone='Europe/Paris',
     beat_schedule={
@@ -184,7 +193,7 @@ def gee_process(aoi_fid: int,
         return message
     
     try:
-        geemap.download_ee_image_collection(collection=collection, out_dir=output_dir, crs="EPSG:3857")
+        geemap.download_ee_image_collection(collection=collection, out_dir=output_dir, crs="EPSG:4326", region=aoi_fc.first().geometry())
 
         new_images_gdf["path"] = new_images_gdf.apply(lambda row: os.path.join(os.environ['GLOURBEE_DATASTORE'], user, f"{row['name']}.tif"), axis=1)
 
@@ -250,13 +259,69 @@ def calculate_metrics(image: int, aoi: int) -> pd.DataFrame:
     sql = text("select * from zone where aoi_fid=:aoi").bindparams(bindparam("aoi"))
     zones = gpd.read_postgis(sql, con=engine, params={'aoi': aoi}, crs=3857, geom_col="geometry")
 
+    # Determine a local cartographic CRS (UTM zone) based on the AOI
+    # Transform the image geometry centroid from EPSG:3857 to EPSG:4326 (lon/lat)
+    transformer = Transformer.from_crs(3857, 4326, always_xy=True)
+    centroid_x, centroid_y = transformer.transform(image.geometry.centroid.x, image.geometry.centroid.y)
+    utm_zone = int((centroid_x + 180) / 6) + 1
+    is_northern = centroid_y >= 0
+    target_epsg = 32600 + utm_zone if is_northern else 32700 + utm_zone
+    target_crs = f"EPSG:{target_epsg}"
+
+    # Re‑project the raster to the target CRS (if needed)
+    raster_path = image['path']
+    with rio.open(raster_path) as src:
+        src_crs = src.crs
+        if src_crs.to_string() != target_crs:
+            # Create a temporary re‑projected file
+            dst_path = raster_path.replace('.tif', f'_utm.tif')
+            transform, width, height = calculate_default_transform(
+                src_crs, target_crs, src.width, src.height, *src.bounds)
+            kwargs = src.meta.copy()
+            kwargs.update({
+                'crs': target_crs,
+                'transform': transform,
+                'width': width,
+                'height': height
+            })
+            with rio.open(dst_path, 'w', **kwargs) as dst:
+                for i in range(1, src.count + 1):
+                    reproject(
+                        source=rio.band(src, i),
+                        destination=rio.band(dst, i),
+                        src_transform=src.transform,
+                        src_crs=src_crs,
+                        dst_transform=transform,
+                        dst_crs=target_crs,
+                        resampling=Resampling.nearest)
+                # Preserve band descriptions from the source raster
+                if src.descriptions:
+                    # Direct assignment works on recent rasterio versions
+                    dst.descriptions = src.descriptions
+            # Use the re‑projected raster for metric calculation
+            raster_path = dst_path
+
+    # Re‑project zones to the same CRS as the raster
     zones = zones[zones.intersects(image.geometry)]
     zones['image'] = image['name']
     zones['date'] = str(image['date'])
     zones['satellite'] = image['satellite']
+    zones = zones.to_crs(target_crs)
 
-    metrics: pd.DataFrame = zones.apply(lambda row: zones_metrics.calculcateZONEsMetricsLocal(image['path'], row['geometry']), axis=1, result_type='expand')
+    # Compute metrics on the re‑projected raster + zones
+    metrics: pd.DataFrame = zones.apply(
+        lambda row: zones_metrics.calculcateZONEsMetricsLocal(raster_path, row['geometry']),
+        axis=1,
+        result_type='expand'
+    )
     zones = pd.concat([zones, metrics], axis=1)
+
+    # Clean up temporary re‑projected raster if we created one
+    if raster_path != image['path'] and os.path.isfile(raster_path):
+        try:
+            os.remove(raster_path)
+        except Exception:
+            pass
 
     zones = zones.drop('geometry', axis='columns')
     zones.to_csv(csv_path)

@@ -10,8 +10,7 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     curl \
     libexpat1 \
-    git \
-    && rm -rf /var/lib/apt/lists/*
+    git 
 
 COPY ./glourbee ./glourbee
 COPY ./pyproject.toml ./pyproject.toml
@@ -24,6 +23,10 @@ RUN pip3 install -U pip
 RUN --mount=source=.git,target=.git,type=bind \
     pip install --no-cache-dir -e . \
     && pip3 cache purge
+
+RUN apt-get remove -y build-essential git \
+    && apt-get autoremove -y \
+    && rm -rf /var/lib/apt/lists/*
 
 EXPOSE 8501
 

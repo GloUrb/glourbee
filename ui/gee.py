@@ -64,7 +64,7 @@ if len(zone_db) > 0:
 m.to_streamlit()
 
 st.title("Start new data calculation and download")
-st.info('Here, you can launch the calculation of masks and indices for new images using Google Earth Engine. Please note that changing something from the default cloud and masks parameters will make the calculated data only available for you (not the other users) and for 1 month long instead of 6.')
+st.info('Here, you can launch the calculation of masks and indices for new images using Google Earth Engine.')
 
 @st.fragment
 def new_data_form():
@@ -111,17 +111,6 @@ def new_data_form():
     activechannel_expression = ct.text_input('Active Channel expression', value=default_ac)
     vegetation_expression = ct.text_input('Vegetation expression', value=default_veget)
 
-    if (
-            cloud_filter != 80 or
-            not cloud_masking or
-            watermask_expression != default_water or
-            activechannel_expression != default_ac or
-            vegetation_expression != default_veget
-        ):
-        user = st.session_state['user']['name']
-    else:
-        user = 'all'
-
     if form.button("Start tasks"):
         with st.spinner('Starting tasks...'):
             if not form_repeat_years or not form_repeat_start or not form_repeat_end:
@@ -134,7 +123,7 @@ def new_data_form():
                     watermask_expression=watermask_expression,
                     activechannel_expression=activechannel_expression,
                     vegetation_expression=vegetation_expression,
-                    user=user,
+                    user=st.session_state['user']['name'],
                     email_notif=email
                 )
 
@@ -154,7 +143,7 @@ def new_data_form():
                         watermask_expression=watermask_expression,
                         activechannel_expression=activechannel_expression,
                         vegetation_expression=vegetation_expression,
-                        user=user,
+                        user=st.session_state['user']['name'],
                         email_notif=email
                     )
 

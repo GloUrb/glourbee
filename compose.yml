@@ -1,6 +1,7 @@
 services:
   ui:
     image: ghcr.io/glourb/glourbee-ui:latest
+    build: .
     restart: always
     depends_on:
       - worker
@@ -9,7 +10,8 @@ services:
       - "8501:8501"
     environment:
       - GLOURBEE_DATASTORE=$GLOURBEE_DATASTORE
-      - GLOURBEE_BROKER_URL=$GLOURBEE_BROKER_URL
+      - GLOURBEE_DL_BROKER_URL=$GLOURBEE_DL_BROKER_URL
+      - GLOURBEE_WRK_BROKER_URL=$GLOURBEE_WRK_BROKER_URL
       - GLOURBEE_DB_URI=$GLOURBEE_DB_URI
       - FILES_USER=$FILES_USER
       - FILES_PASSWORD=$FILES_PASSWORD
@@ -23,6 +25,7 @@ services:
 
   worker:
     image: ghcr.io/glourb/glourbee-ui:latest
+    build: .
     restart: always
     depends_on:
       - broker
@@ -30,7 +33,8 @@ services:
     command: [celery, -A, glourbee.worker, worker, -B, -c, "1", -l, INFO]
     environment:
       - GLOURBEE_DATASTORE=$GLOURBEE_DATASTORE
-      - GLOURBEE_BROKER_URL=$GLOURBEE_BROKER_URL
+      - GLOURBEE_DL_BROKER_URL=$GLOURBEE_DL_BROKER_URL
+      - GLOURBEE_WRK_BROKER_URL=$GLOURBEE_WRK_BROKER_URL
       - GLOURBEE_DB_URI=$GLOURBEE_DB_URI
       - GLOURBEE_EMAIL_FROM=$GLOURBEE_EMAIL_FROM
       - GLOURBEE_EMAIL_SERVER=$GLOURBEE_EMAIL_SERVER
@@ -50,7 +54,7 @@ services:
       - ./glourbee:/app/glourbee # dev only
 
   files:
-    image: registry.sftpgo.com/sftpgo/sftpgo:v2.7.20251107
+    image: registry.sftpgo.com/sftpgo/sftpgo:v2.7.20260426
     restart: always
     ports: 
       - "8080:8080"
