@@ -7,11 +7,17 @@ secondaryBackgroundColor="#cbeac7"
 level = 'info'
 
 [client]
-showErrorDetails = true # Set to false in production
+showErrorDetails = "full"
 toolbarMode = "auto"
 
+[runner]
+enforceSerializableSessionState = true
+
 [server]
+folderWatchList = ["/app/glourbee"]
 cookieSecret = "dontforgettochangeit"
+enableCORS = true
+enableXsrfProtection = true
 maxUploadSize = 50
 
 [browser]

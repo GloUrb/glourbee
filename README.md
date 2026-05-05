@@ -26,53 +26,60 @@ The `notebook.ipynb` file contains example of how to use the GloUrbEE tool.
 
 The GloUrbEE-UI allow you to use the main GloUrbEE package workflow with a fancy user-friendly interface.
 
+![The GloUrbEE-UI workflow](./ui/lib/img/workflow.png)
+
+## With docker (recommended)
+
+Copy-paste .env.example to .env and make your changes. 
+
+```bash
+docker compose up
+```
+
 ## With streamlit 
 
 - Windows
 ```powershell
 .\env\Scripts\activate
-streamlit run ui/00_🏠_HomePage.py
+streamlit run ui/app.py
 ```
 
 - Linux
 ```bash
 source env/bin/activate
-streamlit run ui/00_🏠_HomePage.py
-```
-
-## With docker
-
-```bash
-docker run --expose 8501 ghcr.io/evs-gis/glourbee-ui:latest 
+streamlit run ui/app.py
 ```
 
 The application should be available at http://localhost:8501
 
 # Data extracted
 ## Metrics
+
+The 4 extracted classes are WATER for water polygons, AC for active channel polygons, VEGETATION for vegetation polygons and CLOUDS for clouds.
+The indicators calculated are NDVI, NDWI, MNDWI and BSI. 
+
 | metric name | description |   
 |---|---|
-| AC_AREA | Active Channel area (pixels) |
-| CLOUD_SCORE | Percent of the ZONE covered by clouds (%) |
-| COVERAGE_SCORE | Percent of the ZONE covered by the Landsat image (%) |
-| SCALE | Size of a pixel on the selected imagery dataset (meters) |
-| MEAN_AC_MNDWI | Mean MNDWI in the active channel surface |
-| MEAN_AC_NDVI | Mean NDVI in the active channel surface |
-| ~~MEAN_DRY_MNDWI~~ | ~~Mean MNDWI in the surface which is not water~~  |
-| MEAN_MNDWI | Mean MNDWI of the full ZONE |
-| MEAN_NDVI| Mean NDVI of the full ZONE |
-| MEAN_BSI | Mean BSI (Bare Soil Index) of the full zone |
-| MEAN_VEGETATION_MNDWI | Mean MNDWI in the vegetation surface |
-| MEAN_VEGETATION_NDVI | Mean NDVI in the vegetation surface |
-| MEAN_WATER_MNDWI | Mean MNDWI in the water surface |
-| VEGETATION_AREA | Vegetation area (pixels) |
-| VEGETATION_POLYGONS | Number of vegetation patches inside the ZONE |
-| VEGETATION_POLYGONS_p* | Percentiles of the vegetation patches size (in pixels) inside the ZONE |
-| VEGETATION_PERIMETER | Vegetation surface perimeter (projection unit) |
-| WATER_AREA | Water area (pixels) |
-| WATER_POLYGONS | Number of water patches inside the ZONE |
-| WATER_POLYGONS_p* | Percentiles of the water patches size (in pixels) inside the ZONE |
-| WATER_PERIMETER | Water surface perimeter (projection unit) |
+| ZONE_AREA | Area (number of pixels) of the image in the extraction area |
+| *class_name*_AREA | Area (number of pixels) of this class in the extraction area |
+| *indicator*_MIN | Minimal value of the indicator in the full extraction area |
+| *indicator*_MEAN | Mean value of the indicator in the full extraction area |
+| *indicator*_MAX | Maximal value of the indicator in the full extraction area |
+| *indicator*_STD | Standard deviation of the indicator in the full extraction area |
+| *class_name*\_POLYGONS_indicator_MIN | Minimal value of the indicator in the class polygons inside the extraction area |
+| *class_name*\_POLYGONS_*indicator*_MEAN | Mean value of the indicator in the class polygons inside the extraction area |
+| *class_name*\_POLYGONS_*indicator*_MAX | Maximal value of the indicator in the class polygons inside the extraction area |
+| *class_name*\_POLYGONS_*indicator*_STD | Standard deviation of the indicator in the class polygons inside the extraction area |
+| *class_name*\_POLYGONS_COUNT | Number of patches of the class inside the extraction area |
+| *class_name*_AREA | Number of pixels of the class in the extraction zone |
+| *class_name*\_POLYGONS_AREA_p* | Distribution (percentiles) of the number of pixel of each polygon of the class |
+| *class_name*\_POLYGONS_PERIMETER_p* | Distribution (percentiles) of the permieter of each polygon of the class |
+| *class_name*\_POLYGONS_ECCENTRICITY_p* | Distribution (percentiles) of the eccentricity<sup>1</sup> of each polygon of the class |
+| *class_name*\_POLYGONS_SOLIDITY_p* | Distribution (percentiles) of the solidity<sup>2</sup> of each polygon of the class |
+
+<sup>1</sup> Eccentricity of the ellipse that has the same second-moments as the polygon. The eccentricity is the ratio of the focal distance (distance between focal points) over the major axis length. The value is in the interval [0, 1). When it is 0, the ellipse becomes a circle. [Source...](https://scikit-image.org/docs/stable/api/skimage.measure.html)
+
+<sup>2</sup> Solidity is the ratio of pixels in the polygon to pixels of the convex hull image. [Source...](https://scikit-image.org/docs/stable/api/skimage.measure.html)
 
 ### How the masks are extracted
 To extract the water, active channel and vegetation masks, the following expressions are proposed as default parameters depending of the selected imagery.

@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=80", "setuptools-scm[simple]>=8"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["glourbee"]
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
+
+[project]
+name = "glourbee"
+authors = [
+  {name = "Samuel Dunesme", email = "samuel.dunesme@ens-lyon.fr"}
+]
+description = "Use GEE to extract metrics on river corridors DGOs. This project is part of the GloUrb ANR."
+readme = "README.md"
+dynamic = ["version", "dependencies"]
+requires-python = ">=3.10"

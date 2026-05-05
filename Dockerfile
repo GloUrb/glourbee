@@ -1,37 +1,44 @@
-FROM python:3.10-slim
+FROM python:3.12-slim
 LABEL org.opencontainers.image.authors="samuel.dunesme@ens-lyon.fr"
-LABEL org.opencontainers.image.source="https://github.com/EVS-GIS/glourbee"
-LABEL org.opencontainers.image.description="Use GEE to extract metrics concerning river corridors. This project is part of the GloUrb ANR."
+LABEL org.opencontainers.image.source="https://github.com/GloUrb/glourbee"
+LABEL org.opencontainers.image.description="User interface for GloUrb-EE. This project is part of the GloUrb ANR."
 LABEL org.opencontainers.image.licenses="GPL-3.0-only"
-
-# Keeps Python from generating .pyc files in the container
-ENV PYTHONDONTWRITEBYTECODE=1
-
-# Turns off buffering for easier container logging
-ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y \
     build-essential \
     curl \
-    software-properties-common \
-    && rm -rf /var/lib/apt/lists/*
+    libexpat1 \
+    git 
 
-COPY ./ui ./ui
 COPY ./glourbee ./glourbee
-COPY ./setup.py ./setup.py
+COPY ./pyproject.toml ./pyproject.toml
+COPY ./ui ./ui
+COPY ./alembic ./alembic
+COPY ./alembic.ini ./alembic.ini
+COPY ./requirements.txt ./requirements.txt
 
 RUN pip3 install -U pip
-RUN pip3 install -e . \
+RUN --mount=source=.git,target=.git,type=bind \
+    pip install --no-cache-dir -e . \
     && pip3 cache purge
+
+RUN apt-get remove -y build-essential git \
+    && apt-get autoremove -y \
+    && rm -rf /var/lib/apt/lists/*
 
 EXPOSE 8501
 
-HEALTHCHECK CMD curl --fail http://localhost:8501/_stcore/health
+HEALTHCHECK --start-period=5s CMD curl --fail http://localhost:8501/_stcore/health
 
 # Creates a non-root user with an explicit UID and adds permission to access the /app folder
-RUN adduser -u 5678 --disabled-password --gecos "" appuser && chown -R appuser /app
-USER appuser
+RUN adduser -u 5678 --disabled-password --gecos "" glourbee && chown -R glourbee /app
 
-CMD ["streamlit", "run", "ui/00_🏠_HomePage.py", "--server.port=8501", "--server.address=0.0.0.0"]
+# Creates the data dir and set permissions for the glourbee user
+RUN mkdir /data && chown -R glourbee /data
+VOLUME /data
+
+USER glourbee
+
+CMD ["streamlit", "run", "./ui/app.py", "--server.port=8501", "--server.address=0.0.0.0"]

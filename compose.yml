@@ -1,11 +1,90 @@
 services:
-  app:
-    image: ghcr.io/evs-gis/glourbee-ui:1.1.0
-    build:
-      context: .
-      dockerfile: ./Dockerfile
+  ui:
+    image: ghcr.io/glourb/glourbee-ui:latest
+    build: .
+    restart: always
+    depends_on:
+      - worker
+      - db
     ports:
       - "8501:8501"
+    environment:
+      - GLOURBEE_DATASTORE=$GLOURBEE_DATASTORE
+      - GLOURBEE_DL_BROKER_URL=$GLOURBEE_DL_BROKER_URL
+      - GLOURBEE_WRK_BROKER_URL=$GLOURBEE_WRK_BROKER_URL
+      - GLOURBEE_DB_URI=$GLOURBEE_DB_URI
+      - FILES_USER=$FILES_USER
+      - FILES_PASSWORD=$FILES_PASSWORD
+      - FILES_URL=$FILES_URL
+      - SFTP_HOST=$SFTP_HOST
+      - SFTP_PORT=$SFTP_PORT
     volumes:
-      - ./ui:/app/ui:ro
-      - ./glourbee:/app/glourbee:ro
+      - data:/data
+      - ./glourbee:/app/glourbee # dev only
+      - ./ui:/app/ui # dev only
+
+  worker:
+    image: ghcr.io/glourb/glourbee-ui:latest
+    build: .
+    restart: always
+    depends_on:
+      - broker
+      - db
+    command: [celery, -A, glourbee.worker, worker, -B, -c, "1", -l, INFO]
+    environment:
+      - GLOURBEE_DATASTORE=$GLOURBEE_DATASTORE
+      - GLOURBEE_DL_BROKER_URL=$GLOURBEE_DL_BROKER_URL
+      - GLOURBEE_WRK_BROKER_URL=$GLOURBEE_WRK_BROKER_URL
+      - GLOURBEE_DB_URI=$GLOURBEE_DB_URI
+      - GLOURBEE_EMAIL_FROM=$GLOURBEE_EMAIL_FROM
+      - GLOURBEE_EMAIL_SERVER=$GLOURBEE_EMAIL_SERVER
+      - GLOURBEE_EMAIL_PORT=$GLOURBEE_EMAIL_PORT
+      - GLOURBEE_EMAIL_USER=$GLOURBEE_EMAIL_USER
+      - GLOURBEE_EMAIL_PASSWORD=$GLOURBEE_EMAIL_PASSWORD
+      - GLOURBEE_EE_JSONKEY=$GLOURBEE_EE_JSONKEY
+    healthcheck: 
+        test: ["CMD-SHELL", "celery -A glourbee.worker inspect ping --destination celery@$$HOSTNAME"]
+        interval: 30s
+        timeout: 10s
+        retries: 5
+        start_period: 5s
+    volumes:
+      - data:/data
+      - ./ee-glourb-718927cf3d80.json:/app/earthengine-key.json:ro
+      - ./glourbee:/app/glourbee # dev only
+
+  files:
+    image: registry.sftpgo.com/sftpgo/sftpgo:v2.7.20260426
+    restart: always
+    ports: 
+      - "8080:8080"
+      - "$SFTP_PORT:2022"
+    volumes:
+      - data:/data:ro
+      - sftpgo-data:/srv/sftpgo
+      - sftpgo-home:/var/lib/sftpgo
+    environment:
+      - SFTPGO_COMMON__DEFENDER__ENABLED=true
+
+  broker:
+    image: redis:latest
+    restart: always
+
+  db:
+    image: postgis/postgis:latest
+    restart: always
+    shm_size: 128mb
+    ports:
+      - "5432:5432" # dev only
+    environment:
+      - POSTGRES_DB=$POSTGRES_DB
+      - POSTGRES_USER=$POSTGRES_USER
+      - POSTGRES_PASSWORD=$POSTGRES_PASSWORD
+    volumes:
+      - db-data:/var/lib/postgresql/data
+
+volumes:
+  data:
+  db-data:
+  sftpgo-data:
+  sftpgo-home:
