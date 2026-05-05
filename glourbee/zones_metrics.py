@@ -304,6 +304,8 @@ def calculcateZONEsMetricsLocal(image_path: str, zone: MultiPolygon | Polygon) -
             
             if c == 'CLOUDS':
                 metrics['ZONE_AREA'] = np.sum(image >= 0)
+                image[np.where(image==1)] = 255
+                image[np.where(image==0)] = 1
 
             image[np.where(image==-np.inf)] = 255
 

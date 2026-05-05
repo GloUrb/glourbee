@@ -193,7 +193,11 @@ def gee_process(aoi_fid: int,
         return message
     
     try:
-        geemap.download_ee_image_collection(collection=collection, out_dir=output_dir, crs="EPSG:4326", region=aoi_fc.first().geometry())
+        geemap.download_ee_image_collection(collection=collection, 
+                                            out_dir=output_dir, 
+                                            crs="EPSG:4326", 
+                                            region=aoi_fc.first().geometry(),
+                                            num_threads=2)
 
         new_images_gdf["path"] = new_images_gdf.apply(lambda row: os.path.join(os.environ['GLOURBEE_DATASTORE'], user, f"{row['name']}.tif"), axis=1)
 
