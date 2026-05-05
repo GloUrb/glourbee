@@ -197,7 +197,7 @@ def gee_process(aoi_fid: int,
                                             out_dir=output_dir, 
                                             crs="EPSG:4326", 
                                             region=aoi_fc.first().geometry(),
-                                            num_threads=2)
+                                            max_requests=2)
 
         new_images_gdf["path"] = new_images_gdf.apply(lambda row: os.path.join(os.environ['GLOURBEE_DATASTORE'], user, f"{row['name']}.tif"), axis=1)
 
